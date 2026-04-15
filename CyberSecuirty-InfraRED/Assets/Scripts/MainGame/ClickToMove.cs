@@ -1,57 +1,37 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 
 public class ClickToMove : MonoBehaviour
 {
-    [SerializeField] private InputAction mouseClickAction;
-    private Camera mainCamera;
-    private Coroutine coroutine;
-    [SerializeField] private float playerSpeed;
-    private Vector3 targetPosition;
+    private NavMeshAgent agent;
+    
+    public float moveSpeed;
 
-    private void Awake()
+    private void Start()
     {
-        mainCamera = Camera.main;
-    }
-
-    private void OnEnable()
-    {
-        mouseClickAction.Enable();
-        mouseClickAction.performed += Move;
+        agent = GetComponent<NavMeshAgent>();
         
+        agent.speed = moveSpeed;
     }
 
-    private void OnDisable()
+    void Update()
     {
-        mouseClickAction.performed -= Move;
-        mouseClickAction.Disable();
-    }
-
-    private void Move(InputAction.CallbackContext context)
-    {
-        Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        if (Physics.Raycast(ray: ray, hitInfo: out RaycastHit hit) && hit.collider)
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            if (coroutine != null) StopCoroutine(coroutine);
-            coroutine = StartCoroutine(PlayerMoveTowards(hit.point));
-            targetPosition = hit.point;
+            Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+            
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                if (NavMesh.SamplePosition(hit.point, out NavMeshHit navMeshHit, Mathf.Infinity, 1))
+                {
+                    agent.SetDestination(navMeshHit.position);
+                }
+                else Debug.Log("clicked point is not a walkable area");
+            }
         }
-    }
-
-    private IEnumerator PlayerMoveTowards(Vector3 target)
-    {
-        while (Vector3.Distance(transform.position, target) > 0.1f);
-        Vector3 destination = Vector3.MoveTowards(transform.position, target, playerSpeed * Time.deltaTime);
-        transform.position = destination;
-        yield return null;
-    }
-
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(targetPosition, 1);
     }
 }
