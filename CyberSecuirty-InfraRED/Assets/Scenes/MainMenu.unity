@@ -521,7 +521,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e52875df75bbac418bd278a6c380149, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::YA_MainMenu
-  sceneToLoad: MG-Grandma
+  sceneToLoad: MainGame
 --- !u!4 &1074069892
 Transform:
   m_ObjectHideFlags: 0

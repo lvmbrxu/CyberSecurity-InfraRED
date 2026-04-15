@@ -9,7 +9,7 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: 402281bc39ea8724d987d522c0cd73ea
   - enabled: 1
-    path: Assets/Scenes/MG-Tetris.unity
+    path: Assets/Tetris/MG-Tetris.unity
     guid: b233edd66620fb8489101ebcf148a8d5
   - enabled: 1
     path: Assets/Scenes/MG-Grandma.unity
@@ -17,6 +17,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Ending.unity
     guid: a712cc56272c2a045bf9b8f023b85bd9
+  - enabled: 1
+    path: Assets/Scenes/MainGame.unity
+    guid: 4b82e35a5d8ac6148afc0dedd2e28e9b
+  - enabled: 1
+    path: Assets/DoodleJump/MG-Doodle.unity
+    guid: ff59ac4c360abef4ea76c22a0eeacbe7
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
