@@ -1,64 +1,51 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
-using ZXing;
-using ZXing.Common;
 
-public class QRCodeDisplay : MonoBehaviour
+public class ServerQrImageLoader : MonoBehaviour
 {
-    [SerializeField] private ServerInfoDisplay serverInfoDisplay;
+    [SerializeField] private string localBaseUrl = "http://127.0.0.1:8080";
+    [SerializeField] private string session = "ABCD";
     [SerializeField] private RawImage targetImage;
-    [SerializeField] private int width = 512;
-    [SerializeField] private int height = 512;
-    [SerializeField] private bool generateOnStart = true;
+    [SerializeField] private bool loadOnStart = true;
+    [SerializeField] private float delayBeforeLoad = 1.0f;
 
     private void Start()
     {
-        if (generateOnStart)
+        if (loadOnStart)
         {
-            Invoke(nameof(GenerateQrFromServerInfo), 1.0f);
+            StartCoroutine(DelayedLoad());
         }
     }
 
-    public void GenerateQrFromServerInfo()
+    private IEnumerator DelayedLoad()
     {
-        if (serverInfoDisplay == null)
-        {
-            Debug.LogError("ServerInfoDisplay reference missing.");
-            return;
-        }
-
-        string text = serverInfoDisplay.CurrentJoinUrl;
-        if (string.IsNullOrEmpty(text))
-        {
-            Debug.LogWarning("Join URL not ready yet.");
-            return;
-        }
-
-        GenerateQr(text);
+        yield return new WaitForSeconds(delayBeforeLoad);
+        yield return LoadQr();
     }
 
-    public void GenerateQr(string text)
+    public IEnumerator LoadQr()
     {
-        var writer = new BarcodeWriter
+        string url = $"{localBaseUrl}/api/qr?session={UnityWebRequest.EscapeURL(session)}";
+
+        using UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
+        yield return request.SendWebRequest();
+
+        if (request.result != UnityWebRequest.Result.Success)
         {
-            Format = BarcodeFormat.QR_CODE,
-            Options = new EncodingOptions
-            {
-                Width = width,
-                Height = height,
-                Margin = 1
-            }
-        };
+            Debug.LogError("Failed to load QR: " + request.error);
+            yield break;
+        }
 
-        Color32[] pixels = writer.Write(text);
-
-        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        texture.SetPixels32(pixels);
-        texture.Apply();
+        Texture texture = DownloadHandlerTexture.GetContent(request);
 
         if (targetImage != null)
         {
             targetImage.texture = texture;
+            targetImage.SetNativeSize();
         }
+
+        Debug.Log("QR loaded from server.");
     }
 }
