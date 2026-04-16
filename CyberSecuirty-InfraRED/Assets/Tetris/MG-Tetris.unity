@@ -917,7 +917,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIScript
   gameOverPanel: {fileID: 1825959719}
   winPanel: {fileID: 1549511091}
-  sceneLoader: {fileID: 1247089675}
 --- !u!114 &1247089675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -930,9 +929,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829038c476224c47b989dc730689d8b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
-  mainMenuBuildIndex: 0
-  gameBuildIndex: 1
-  nextLevelBuildIndex: 2
+  mainMenuBuildIndex: 4
+  nextBuildIndex: 3
 --- !u!1 &1376485469
 GameObject:
   m_ObjectHideFlags: 0
@@ -1481,9 +1479,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1247089672}
-        m_TargetAssemblyTypeName: TetrisGameManager, Assembly-CSharp
-        m_MethodName: Restart
+      - m_Target: {fileID: 1247089675}
+        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
+        m_MethodName: RestartCurrent
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

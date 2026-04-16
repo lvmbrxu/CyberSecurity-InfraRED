@@ -1,10 +1,10 @@
 // TetrisGameManager.cs
-// Clues are embedded in pieces (random blocks inside the spawned shape become clue blocks).
-// When a line clear removes a placed clue cell -> award clue (1..5).
-// After 5 -> freeze + win UI (Continue). Also logs "introduce password".
+
+// NEW CHANGES
+// NO scene loading. GameOver/Win just shows UI + freezes.
+// Restart is removed; use the new SceneLoader button for restart if you want.
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
 
 public sealed class TetrisGameManager : MonoBehaviour
@@ -22,9 +22,9 @@ public sealed class TetrisGameManager : MonoBehaviour
     public Camera cam;
 
     [Header("Prefabs")]
-    public GameObject gridCellPrefab;     // empty-looking tile
-    public GameObject placedBlockPrefab;  // solid placed cell
-    public GameObject pieceBlockPrefab;   // draggable cell
+    public GameObject gridCellPrefab;
+    public GameObject placedBlockPrefab;
+    public GameObject pieceBlockPrefab;
 
     [Header("Colors")]
     public Color[] pieceColors;
@@ -41,7 +41,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     public int seed = 0;
 
     [Header("UI")]
-    public UIScript ui; // must have ShowGameOver() + ShowWin() + Continue()
+    public UIScript ui;
 
     // Public access used by PieceView
     public float CellSize => cellSize;
@@ -49,13 +49,10 @@ public sealed class TetrisGameManager : MonoBehaviour
     public Camera Camera => cam;
     public Vector3 CurrentSpawnWorld => currentSpawnWorld;
 
-    // Board state
     bool[,] occ;
-    bool[,] clueOcc; // placed clue cells (awarded when cleared)
-
+    bool[,] clueOcc;
     GameObject[,] placedVisual;
 
-    // Current piece state
     PieceView currentPiece;
     Vector2Int[] currentShape;
     bool[] currentShapeIsClue;
@@ -63,12 +60,12 @@ public sealed class TetrisGameManager : MonoBehaviour
 
     System.Random rng;
     int cluesFound;
-    bool ended;      // blocks input/flow for either win or lose
+    bool ended;
 
     Color currentPieceColor;
 
-    static readonly int ColorId = Shader.PropertyToID("_BaseColor"); // URP Lit
-    static readonly int ColorIdAlt = Shader.PropertyToID("_Color");  // Standard
+    static readonly int ColorId = Shader.PropertyToID("_BaseColor");
+    static readonly int ColorIdAlt = Shader.PropertyToID("_Color");
 
     void Awake()
     {
@@ -83,7 +80,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         SpawnNextPieceOrGameOver();
     }
 
-    // ---------- Grid mapping ----------
     public Vector3 GridToWorld(Vector2Int g)
         => new Vector3(gridOrigin.x + g.x * cellSize, gridOrigin.y + g.y * cellSize, gridZ);
 
@@ -112,7 +108,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         return true;
     }
 
-    // ---------- Grid visuals ----------
     void BuildGridVisuals()
     {
         if (!gridCellPrefab) return;
@@ -125,7 +120,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    // ---------- Piece flow ----------
     void SpawnNextPieceOrGameOver()
     {
         if (ended) return;
@@ -164,7 +158,6 @@ public sealed class TetrisGameManager : MonoBehaviour
     bool[] BuildClueMaskForShape(Vector2Int[] shape)
     {
         var mask = new bool[shape.Length];
-
         if (rng.NextDouble() > chancePieceContainsClue) return mask;
 
         int n = Mathf.Clamp(maxClueBlocksPerPiece, 1, shape.Length);
@@ -197,9 +190,6 @@ public sealed class TetrisGameManager : MonoBehaviour
             if (p.y > maxY) maxY = p.y;
         }
 
-        // Anchors we try are the anchor positions such that all cells stay inside the board:
-        // 0 <= anchor.x + minX and anchor.x + maxX < width
-        // 0 <= anchor.y + minY and anchor.y + maxY < height
         int startX = -minX;
         int endX = (width - 1) - maxX;
         int startY = -minY;
@@ -227,7 +217,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         return true;
     }
 
-    // integer anchor placement (no float drift)
     public bool TryPlaceCurrentPieceAtAnchor(Vector2Int anchor)
     {
         if (ended) return false;
@@ -239,15 +228,12 @@ public sealed class TetrisGameManager : MonoBehaviour
         CommitPlacement(currentShape, currentShapeIsClue, anchor);
         ClearLinesAndAwardClues();
 
-        // WIN: show win UI + freeze (continue button resumes)
         if (!ended && cluesFound >= cluesToCollect)
         {
             ended = true;
             Debug.Log("introduce password");
-
             if (ui) ui.ShowWin();
             else Time.timeScale = 0f;
-
             return true;
         }
 
@@ -279,7 +265,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    // ---------- Clears ----------
     void ClearLinesAndAwardClues()
     {
         var fullRows = new List<int>();
@@ -355,26 +340,21 @@ public sealed class TetrisGameManager : MonoBehaviour
         r.SetPropertyBlock(mpb);
     }
 
-    // ---------- Game over / UI ----------
     void GameOver_NoSpace()
     {
         if (ended) return;
         ended = true;
 
         if (ui) ui.ShowGameOver();
-        else Debug.Log("GAME OVER: no space for next piece.");
+        else Time.timeScale = 0f;
     }
 
-    // Called by UI Continue button (optional)
-    public void ContinueAfterWin()
+    // Call this from your Continue button if you want gameplay to resume
+    public void ContinueGameplay()
     {
+        ended = false;
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);;
-    }
-
-    public void Restart()
-    {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        // If you want to keep playing after win:
+        // SpawnNextPieceOrGameOver();
     }
 }

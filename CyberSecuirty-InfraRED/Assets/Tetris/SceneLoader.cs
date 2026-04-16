@@ -1,25 +1,55 @@
 // SceneLoader.cs
-// Put on a GameObject in every relevant scene (or a persistent one).
-// Then wire UI buttons to these public methods.
+// Drop this in ANY scene. Hook UI Buttons to these public methods.
+// Uses build index OR scene name. Works everywhere.
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public sealed class SceneLoader : MonoBehaviour
 {
-    [Header("Scene Build Indexes")]
+    [Header("Default targets (optional)")]
+    [Tooltip("If set, LoadMainMenu() loads this build index.")]
     public int mainMenuBuildIndex = 0;
-    public int gameBuildIndex = 1;        // this block-blast scene
-    public int nextLevelBuildIndex = 2;   // optional
 
-    public void LoadMainMenu() => LoadByIndex(mainMenuBuildIndex);
-    public void RestartCurrent() => LoadByIndex(SceneManager.GetActiveScene().buildIndex);
-    public void LoadGame() => LoadByIndex(gameBuildIndex);
-    public void LoadNextLevel() => LoadByIndex(nextLevelBuildIndex);
+    [Tooltip("If set, LoadNext() loads this build index.")]
+    public int nextBuildIndex = -1;
 
-    public void LoadByIndex(int buildIndex)
+    // ---- Button hooks ----
+
+    public void RestartCurrent()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void LoadMainMenu()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(mainMenuBuildIndex);
+    }
+
+    public void LoadNext()
+    {
+        Time.timeScale = 1f;
+
+        int idx = nextBuildIndex >= 0
+            ? nextBuildIndex
+            : SceneManager.GetActiveScene().buildIndex + 1;
+
+        SceneManager.LoadScene(idx);
+    }
+
+    // ---- Generic (use for any button) ----
+
+    public void LoadByBuildIndex(int buildIndex)
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(buildIndex);
+    }
+
+    public void LoadByName(string sceneName)
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(sceneName);
     }
 
     public void Quit()

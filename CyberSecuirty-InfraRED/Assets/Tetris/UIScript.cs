@@ -1,14 +1,11 @@
 // UIScript.cs
-// Win -> load main menu, GameOver -> restart, etc.
+// UI only: show/hide panels + freeze/unfreeze. NO scene loading.
 using UnityEngine;
 
 public sealed class UIScript : MonoBehaviour
 {
     public GameObject gameOverPanel;
     public GameObject winPanel;
-
-    [Header("Scene Loading")]
-    public SceneLoader sceneLoader;
 
     void Awake()
     {
@@ -28,8 +25,20 @@ public sealed class UIScript : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    // UI Button hooks
-    public void Restart() => sceneLoader.RestartCurrent();
-    public void WinContinueToMenu() => sceneLoader.LoadMainMenu();
-    public void ContinueNextLevel() => sceneLoader.LoadNextLevel();
+    public void HideGameOver()
+    {
+        if (gameOverPanel) gameOverPanel.SetActive(false);
+    }
+
+    public void HideWin()
+    {
+        if (winPanel) winPanel.SetActive(false);
+    }
+
+    // Button hook: Continue (after win)
+    public void Continue()
+    {
+        HideWin();
+        Time.timeScale = 1f;
+    }
 }
