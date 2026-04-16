@@ -411,6 +411,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Platform
       objectReference: {fileID: 0}
+    - target: {fileID: 5611921209777640196, guid: 670cc50d0d8adfc45b34b22790a0970f, type: 3}
+      propertyPath: breaks
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1458,6 +1462,38 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6961271934742157308, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
   m_PrefabInstance: {fileID: 2138302956}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1701509017 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 572841904799418425, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+  m_PrefabInstance: {fileID: 2138302956}
+  m_PrefabAsset: {fileID: 0}
+--- !u!54 &1701509023
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1701509017}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 8
+  m_CollisionDetection: 0
 --- !u!1 &1788614633
 GameObject:
   m_ObjectHideFlags: 0
@@ -1550,7 +1586,7 @@ MonoBehaviour:
   finishPlatformPrefab: {fileID: 4635515379836692887, guid: 4236964ba03746b46b42dbc361b981d8, type: 3}
   finishWorldY: 130
   finishExtraClearance: 3
-  bandMinAbove: 1.45
+  bandMinAbove: 0
   bandMaxAbove: 130
   minGapY: 1.5
   maxGapY: 2.6
@@ -1908,7 +1944,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 572841904799418425, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1701509023}
   m_SourcePrefab: {fileID: 100100000, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
 --- !u!1001 &376138148143677610
 PrefabInstance:
