@@ -11,12 +11,22 @@ public class SettingsMenu : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioMixer mainMixer;
 
+    private bool isInitialized;
+
     private void Start()
     {
-        // Load saved volume
-        float savedVolume = PlayerPrefs.GetFloat("volume", 0.75f);
+        float savedVolume = PlayerPrefs.GetFloat("volume", 1f);
+
+        // prevent slider event firing during setup
+        volumeSlider.onValueChanged.RemoveListener(SetVolume);
+
         volumeSlider.value = savedVolume;
+
         SetVolume(savedVolume);
+
+        volumeSlider.onValueChanged.AddListener(SetVolume);
+
+        isInitialized = true;
     }
 
     public void ToggleSettings()
@@ -26,7 +36,8 @@ public class SettingsMenu : MonoBehaviour
 
     public void SetVolume(float value)
     {
-        // convert slider (0 to 1) into decibels
+        if (!isInitialized) return;
+
         float volumeDb = Mathf.Log10(Mathf.Clamp(value, 0.0001f, 1f)) * 20f;
 
         mainMixer.SetFloat("MasterVolume", volumeDb);
