@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 public class PauseMenu : MonoBehaviour
 {
@@ -11,21 +12,37 @@ public class PauseMenu : MonoBehaviour
 
     private bool isPaused = false;
 
+    private InputAction pauseAction;
+
+    private void Awake()
+    {
+        // Bind ESC key
+        pauseAction = new InputAction(type: InputActionType.Button, binding: "<Keyboard>/escape");
+        pauseAction.performed += _ => TogglePause();
+    }
+
+    private void OnEnable()
+    {
+        pauseAction.Enable();
+    }
+
+    private void OnDisable()
+    {
+        pauseAction.Disable();
+    }
+
     private void Start()
     {
         pausePanel.SetActive(false);
         Time.timeScale = 1f;
     }
 
-    private void Update()
+    private void TogglePause()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (isPaused)
-                ResumeGame();
-            else
-                PauseGame();
-        }
+        if (isPaused)
+            ResumeGame();
+        else
+            PauseGame();
     }
 
     public void PauseGame()
