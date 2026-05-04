@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 809789371930487237}
   - component: {fileID: 142558243890232423}
   - component: {fileID: 4803123416552314205}
-  - component: {fileID: 5611921209777640196}
+  - component: {fileID: 238173720700494319}
   m_Layer: 3
   m_Name: Platform
   m_TagString: Untagged
@@ -113,7 +113,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &5611921209777640196
+--- !u!114 &238173720700494319
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -122,8 +122,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 4635515379836692887}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0737064d4bdbb3e40b6ac7cfa76775a8, type: 3}
+  m_Script: {fileID: 11500000, guid: 08039bd6935839148a91df180831cb18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Platform3D
-  breaks: 1
-  breakDelay: 0.2
+  m_EditorClassIdentifier: Assembly-CSharp::PlatformStatic3D
