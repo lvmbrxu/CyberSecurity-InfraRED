@@ -5243,8 +5243,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClickToMove
   moveSpeed: 5
   interactionDistance: 5
---- !u!136 &1650450589
-CapsuleCollider:
+--- !u!4 &1650450590 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 27ac06369f3875143a193f05427fe9a7, type: 3}
+  m_PrefabInstance: {fileID: 1813102030}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1650450593
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -5261,16 +5266,9 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 1.08
-  m_Height: 5.01
-  m_Direction: 1
+  serializedVersion: 3
+  m_Size: {x: 1.0022124, y: 3.765045, z: 1.4938883}
   m_Center: {x: 0, y: 1.888961, z: 0.103689924}
---- !u!4 &1650450590 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 27ac06369f3875143a193f05427fe9a7, type: 3}
-  m_PrefabInstance: {fileID: 1813102030}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1683243751 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8531084230230199607, guid: 0c605beccccc118438cf452b7db1c38d, type: 3}
@@ -5499,7 +5497,7 @@ PrefabInstance:
       addedObject: {fileID: 1650450583}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 27ac06369f3875143a193f05427fe9a7, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1650450589}
+      addedObject: {fileID: 1650450593}
   m_SourcePrefab: {fileID: 100100000, guid: 27ac06369f3875143a193f05427fe9a7, type: 3}
 --- !u!1001 &1877719823
 PrefabInstance:
