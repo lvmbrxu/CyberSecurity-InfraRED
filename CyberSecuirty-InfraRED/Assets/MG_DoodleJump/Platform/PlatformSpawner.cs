@@ -1,182 +1,278 @@
+// PlatformSpawner.cs
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlatformSpawner : MonoBehaviour
+/// <summary>
+/// PLATFORM FIELD GENERATOR (Vertical Runner)
+/// 
+/// Design goals:
+/// - Infinite generation while player climbs (spawn driven by maxY reached).
+/// - "Natural field" distribution: platforms feel scattered, not a tight chain.
+/// - Density controlled in world-units (platforms per 10 meters), not "chance per spawn".
+/// - Anti-clustering: enforce minimum separation in X/Y to avoid clumps.
+/// - Performance: bounded instantiation per frame, bounded alive count, O(1) cleanup.
+///
+/// Authoring notes (technical game design):
+/// - Tune density first (platformsPer10m), then gap bounds, then separation.
+/// - If jumps feel impossible, increase bounceVelocity OR reduce maxGapY.
+/// - If it feels too busy, reduce platformsPer10m or increase minSeparation.
+/// </summary>
+[DisallowMultipleComponent]
+public sealed class PlatformSpawner : MonoBehaviour
 {
-    [Header("Refs")]
-    public Transform player;
-    public GameObject platformPrefab;     // normal platform prefab 
-    public GameObject finishPlatformPrefab; // final platform prefab 
+    public static PlatformSpawner Instance { get; private set; }
 
-    [Header("Where the finish is")]
-    public float finishWorldY = 120f;     // level end height in world units
-    public float finishExtraClearance = 3f; // spawn finish a bit above last normal platform
+    [Header("References")]
+    [SerializeField] private Transform player;
+    [SerializeField] private GameObject platformPrefab;
 
-    [Header("Spawn band ABOVE player")]
-    public float bandMinAbove = 7f;
-    public float bandMaxAbove = 28f;
+    [Header("Spawn Horizon")]
+    [Tooltip("Always keep content generated this far above the highest player Y reached.")]
+    [SerializeField, Min(10f)] private float spawnAhead = 60f;
 
-    [Header("Quality")]
-    public float minGapY = 1.7f;
-    public float maxGapY = 2.8f;
-    public float minX = -6f;
-    public float maxX = 6f;
-    public float fixedZ = 0f;
-    public float minDeltaXFromLast = 1.3f;
+    [Header("Field Density (Designer)")]
+    [Tooltip("Average number of platforms spawned per 10m of vertical progress.\n"
+           + "Recommended: 6..10 for normal, 4..6 for sparse, 10..14 for hectic.")]
+    [SerializeField, Range(2f, 20f)] private float platformsPer10m = 7.5f;
 
-    [Header("Cleanup / Safety")]
-    public float despawnBelowPlayerY = 35f;
-    public int maxSpawnsPerFrame = 12;
-    public int initialFillGuard = 600;
-    public float minGapEpsilon = 0.1f;
+    [Header("Vertical Spacing (Hard Bounds)")]
+    [Tooltip("Minimum vertical distance between any two spawned platforms (meters).")]
+    [SerializeField, Min(0.5f)] private float minGapY = 1.8f;
+    [Tooltip("Maximum vertical distance between consecutive candidate steps (meters).")]
+    [SerializeField, Min(0.6f)] private float maxGapY = 3.2f;
 
-    [Header("Output (read-only)")]
-    public Transform finishTransform;     // assigned at runtime
+    [Header("Horizontal Range")]
+    [SerializeField] private float minX = -6f;
+    [SerializeField] private float maxX = 6f;
+    [SerializeField] private float fixedZ = 0f;
 
-    float nextSpawnY;
-    float lastSpawnX;
-    bool finishSpawned;
+    [Header("Natural Distribution (Shape)")]
+    [Tooltip("Low frequency drift to prevent 'random TV static'.\n"
+           + "0.03..0.08 recommended. Higher = more waviness.")]
+    [SerializeField, Min(0.001f)] private float driftScale = 0.05f;
 
-    readonly List<GameObject> spawned = new();
+    [Tooltip("How much the Perlin drift biases X vs pure randomness.\n"
+           + "0 = pure random field. 0.3..0.6 = subtle guidance.")]
+    [SerializeField, Range(0f, 1f)] private float driftBias = 0.45f;
 
-    void Start()
+    [Header("Anti-Clustering (Separation)")]
+    [Tooltip("Minimum horizontal separation when platforms are close in Y.")]
+    [SerializeField, Min(0f)] private float minSeparationX = 1.2f;
+
+    [Tooltip("If two platforms are within this Y window, enforce minSeparationX.")]
+    [SerializeField, Min(0.1f)] private float separationYWindow = 1.4f;
+
+    [Header("Performance")]
+    [Tooltip("Hard cap on alive platforms in scene (oldest are destroyed).")]
+    [SerializeField, Min(30)] private int maxAlive = 140;
+
+    [Tooltip("Platforms below (maxY - this) are eligible for cleanup.")]
+    [SerializeField, Min(10f)] private float despawnBelowMaxY = 70f;
+
+    [Tooltip("Worst-case instantiations per frame (prevents spikes).")]
+    [SerializeField, Min(1)] private int maxSpawnsPerFrame = 18;
+
+    [Tooltip("Max attempts to find a valid (non-clustered) position per spawn.")]
+    [SerializeField, Range(1, 16)] private int maxPlacementAttempts = 8;
+
+    // --- Runtime state ---
+    private float _maxY;               // highest Y reached (monotonic)
+    private float _cursorY;            // generation cursor
+    private float _nextDensityY;       // next Y at which we should emit a platform (density scheduler)
+    private float _densityStep;        // average meters per platform (derived)
+    private float _noiseSeed;
+    private bool _stopped;
+
+    // Alive platform queue (oldest first). O(1) cleanup + cap.
+    private readonly Queue<Transform> _alive = new();
+
+    // Recent placements for separation checks (small sliding window).
+    private readonly List<Vector2> _recent = new(64); // (x,y)
+    private int _recentMax = 48;
+
+    private void Awake()
     {
-        if (!player || !platformPrefab) return;
-
-        Sanitize();
-
-        nextSpawnY = player.position.y + bandMinAbove;
-        lastSpawnX = player.position.x;
-        
-        float top = player.position.y + bandMaxAbove;
-        int guard = 0;
-        while (nextSpawnY < top && guard++ < Mathf.Max(1, initialFillGuard))
-            SpawnNormal();
-
-        // If finish is already within/under the current band, spawn it now.
-        TrySpawnFinishIfReached();
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
     }
 
-    void Update()
+    private void Start()
     {
-        if (!player || !platformPrefab) return;
+        if (player == null) player = FindFirstObjectByType<PlayerController>()?.transform;
+        if (player == null || platformPrefab == null) return;
 
         Sanitize();
 
-        // If finish exists, we can stop normal spawning above it.
-        float hardTop = finishSpawned ? finishTransform.position.y : float.PositiveInfinity;
+        _noiseSeed = Random.value * 1000f;
 
-        float bandBottom = player.position.y + bandMinAbove;
-        float bandTop = Mathf.Min(player.position.y + bandMaxAbove, hardTop);
+        _maxY = player.position.y;
+        _cursorY = _maxY;
+        _densityStep = 10f / Mathf.Max(0.1f, platformsPer10m); // meters per platform
+        _nextDensityY = _cursorY + minGapY;                    // first spawn slightly above start
 
-        if (nextSpawnY < bandBottom)
-            nextSpawnY = bandBottom;
+        // Prewarm to horizon so the first seconds are stable.
+        FillTo(_maxY + spawnAhead);
+    }
 
-        int spawnedThisFrame = 0;
-        while (!finishSpawned && nextSpawnY < bandTop && spawnedThisFrame++ < maxSpawnsPerFrame)
-            SpawnNormal();
+    private void Update()
+    {
+        if (_stopped) return;
+        if (GameManager.Instance != null && GameManager.Instance.HasEnded) return;
+        if (player == null || platformPrefab == null) return;
 
-        TrySpawnFinishIfReached();
+        // Drive generation by max progress (never decreases when player falls).
+        float py = player.position.y;
+        if (py > _maxY) _maxY = py;
+
+        float targetTop = _maxY + spawnAhead;
+
+        int spawned = 0;
+        while (_cursorY < targetTop && spawned < maxSpawnsPerFrame)
+        {
+            StepCursor();
+            spawned++;
+        }
+
         Cleanup();
     }
 
-    void TrySpawnFinishIfReached()
+    public void StopSpawning() => _stopped = true;
+
+    // ---------------------------- Generation ----------------------------
+
+    private void FillTo(float topY)
     {
-        if (finishSpawned) return;
-        if (!finishPlatformPrefab) return;
+        int guard = 5000;
+        while (_cursorY < topY && guard-- > 0)
+            StepCursor();
+    }
 
-        // When our normal spawn cursor passes finishWorldY, place finish platform once.
-        if (nextSpawnY >= finishWorldY)
+    /// <summary>
+    /// Advances the generation cursor and emits platforms according to density schedule.
+    /// This gives a "field" instead of "one every step".
+    /// </summary>
+    private void StepCursor()
+    {
+        // Move forward with bounded step.
+        _cursorY += Random.Range(minGapY, maxGapY);
+
+        // Emit platforms when passing the density mark.
+        // Multiple emits can happen if gaps are large.
+        while (_cursorY >= _nextDensityY)
         {
-            float x = PickGoodX(lastSpawnX);
-            float y = Mathf.Max(finishWorldY, nextSpawnY + finishExtraClearance);
-
-            var go = Instantiate(finishPlatformPrefab, new Vector3(x, y, fixedZ), Quaternion.identity, transform);
-            EnsureImmovable(go);
-
-            finishTransform = go.transform;
-            finishSpawned = true;
-
-            // Notify game manager if present
-            if (GameManager.I) GameManager.I.SetFinish(finishTransform);
+            TrySpawnAtY(_nextDensityY);
+            _nextDensityY += _densityStep;
         }
     }
 
-    void SpawnNormal()
+    private void TrySpawnAtY(float y)
     {
-        float gap = Random.Range(minGapY, maxGapY);
-        if (gap < minGapEpsilon) gap = minGapEpsilon;
-
-        float y = nextSpawnY + gap;
-        nextSpawnY = y;
-
-        float x = PickGoodX(lastSpawnX);
-        lastSpawnX = x;
-
-        var go = Instantiate(platformPrefab, new Vector3(x, y, fixedZ), Quaternion.identity, transform);
-        EnsureImmovable(go);
-        spawned.Add(go);
-    }
-
-    void Cleanup()
-    {
-        float killY = player.position.y - despawnBelowPlayerY;
-        for (int i = spawned.Count - 1; i >= 0; i--)
+        // We attempt multiple candidate X values to satisfy separation constraints.
+        for (int attempt = 0; attempt < maxPlacementAttempts; attempt++)
         {
-            var go = spawned[i];
-            if (!go) { spawned.RemoveAt(i); continue; }
-            if (go.transform.position.y < killY)
+            float x = SampleNaturalX(y);
+
+            if (IsValidPlacement(x, y))
             {
-                Destroy(go);
-                spawned.RemoveAt(i);
+                PlacePlatform(x, y);
+                RememberPlacement(x, y);
+                return;
             }
         }
+
+        // Fallback: place anyway with relaxed rules (prevents starvation).
+        float fx = SampleNaturalX(y);
+        PlacePlatform(fx, y);
+        RememberPlacement(fx, y);
     }
 
-    void EnsureImmovable(GameObject go)
+    /// <summary>
+    /// Blends uniform random with low-frequency Perlin drift for "natural" spread.
+    /// driftBias controls how guided vs noisy the distribution is.
+    /// </summary>
+    private float SampleNaturalX(float y)
     {
-        if (go.TryGetComponent<Rigidbody>(out var rb))
+        float uniform = Random.Range(minX, maxX);
+
+        float n = Mathf.PerlinNoise(_noiseSeed, y * driftScale); // 0..1
+        float drift = Mathf.Lerp(minX, maxX, n);
+
+        float x = Mathf.Lerp(uniform, drift, driftBias);
+        return Mathf.Clamp(x, minX, maxX);
+    }
+
+    private bool IsValidPlacement(float x, float y)
+    {
+        // Reject placements that would create local clumps.
+        // Only checks a small recent window (fast).
+        for (int i = 0; i < _recent.Count; i++)
         {
-            rb.isKinematic = true;
-            rb.useGravity = false;
-            rb.constraints = RigidbodyConstraints.FreezeAll;
+            Vector2 p = _recent[i];
+            float dy = Mathf.Abs(y - p.y);
+
+            if (dy <= separationYWindow)
+            {
+                float dx = Mathf.Abs(x - p.x);
+                if (dx < minSeparationX)
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private void PlacePlatform(float x, float y)
+    {
+        Transform t = Instantiate(platformPrefab, new Vector3(x, y, fixedZ), Quaternion.identity).transform;
+        _alive.Enqueue(t);
+
+        // Hard cap: destroy oldest first.
+        while (_alive.Count > maxAlive)
+        {
+            Transform old = _alive.Dequeue();
+            if (old != null) Destroy(old.gameObject);
         }
     }
 
-    float PickGoodX(float lastX)
+    private void RememberPlacement(float x, float y)
     {
-        const int tries = 8;
-        float best = Random.Range(minX, maxX);
-        float bestScore = -1f;
+        _recent.Add(new Vector2(x, y));
 
-        for (int i = 0; i < tries; i++)
-        {
-            float c = Random.Range(minX, maxX);
-
-            float dx = Mathf.Abs(c - lastX);
-            float edge = Mathf.Min(Mathf.Abs(c - minX), Mathf.Abs(maxX - c));
-            float score = 0f;
-
-            score += Mathf.Clamp01(dx / Mathf.Max(0.0001f, minDeltaXFromLast));
-            score += Mathf.Clamp01(edge / ((maxX - minX) * 0.5f)) * 0.35f;
-
-            if (score > bestScore) { bestScore = score; best = c; }
-            if (dx >= minDeltaXFromLast) return c;
-        }
-        return best;
+        // Trim old samples so checks stay O(1) small.
+        if (_recent.Count > _recentMax)
+            _recent.RemoveRange(0, _recent.Count - _recentMax);
     }
 
-    void Sanitize()
+    // ---------------------------- Cleanup ----------------------------
+
+    private void Cleanup()
     {
-        if (maxGapY < minGapY) maxGapY = minGapY;
-        if (minGapY < minGapEpsilon) minGapY = minGapEpsilon;
-        if (maxGapY < minGapEpsilon) maxGapY = minGapEpsilon;
+        float killY = _maxY - despawnBelowMaxY;
 
-        if (bandMaxAbove < bandMinAbove) bandMaxAbove = bandMinAbove + 1f;
-        if (bandMinAbove < 0f) bandMinAbove = 0f;
+        // Oldest-first: pop while below threshold.
+        while (_alive.Count > 0)
+        {
+            Transform t = _alive.Peek();
+            if (t == null) { _alive.Dequeue(); continue; }
+            if (t.position.y >= killY) break;
 
-        if (maxX < minX) { float t = minX; minX = maxX; maxX = t; }
-        if (maxSpawnsPerFrame < 1) maxSpawnsPerFrame = 1;
-        if (initialFillGuard < 50) initialFillGuard = 50;
+            _alive.Dequeue();
+            Destroy(t.gameObject);
+        }
+    }
+
+    // ---------------------------- Validation ----------------------------
+
+    private void Sanitize()
+    {
+        if (maxX < minX) (minX, maxX) = (maxX, minX);
+        if (maxGapY < minGapY) maxGapY = minGapY + 0.5f;
+
+        // Keep designer values within sane runtime constraints.
+        platformsPer10m = Mathf.Clamp(platformsPer10m, 2f, 20f);
+        maxPlacementAttempts = Mathf.Clamp(maxPlacementAttempts, 1, 16);
+        maxSpawnsPerFrame = Mathf.Clamp(maxSpawnsPerFrame, 1, 60);
+
+        // Recent sample window sized for separation checks.
+        _recentMax = Mathf.Clamp(maxAlive / 3, 32, 96);
     }
 }

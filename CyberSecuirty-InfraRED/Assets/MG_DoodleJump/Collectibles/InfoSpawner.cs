@@ -1,43 +1,97 @@
-// CircleSpawner_WaitsForFinish.cs
+// InfoSpawner.cs
 using UnityEngine;
 
-public class InfoSpawner : MonoBehaviour
+/// <summary>
+/// Spawns Security +/- collectibles along the climb.
+/// - No per-frame allocations.
+/// - Stops when GameManager ends or when explicitly stopped.
+/// </summary>
+[DisallowMultipleComponent]
+public sealed class InfoSpawner : MonoBehaviour
 {
-    public PlatformSpawner spawner; // assign
-    public Transform player;
-    public GameObject circlePrefab;
+    public static InfoSpawner Instance { get; private set; }
 
-    public int count = 5;
-    public float minX = -6f;
-    public float maxX = 6f;
-    public float fixedZ = 0f;
-    public float minAbovePlayer = 10f;
-    public float marginBelowFinish = 8f;
+    [Header("Refs")]
+    [SerializeField] private Transform player;
+    [SerializeField] private FollowCamera followCamera;
 
-    bool spawned;
+    [Header("Prefabs")]
+    [SerializeField] private InfoCollectible securityPlusPrefab;
+    [SerializeField] private InfoCollectible securityMinusPrefab;
 
-    void Update()
+    [Header("Spawn Rules")]
+    [SerializeField, Min(1)] private int maxActive = 20;
+    [SerializeField, Min(0.5f)] private float spawnStepY = 8f;
+    [SerializeField, Range(0f, 1f)] private float minusChance = 0.25f;
+
+    [Header("Horizontal Range")]
+    [SerializeField] private float xRange = 3f;
+
+    private float _nextSpawnY;
+    private int _activeCount;
+    private bool _stopped;
+
+    private void Awake()
     {
-        if (spawned) return;
-        if (!spawner || !player || !circlePrefab) return;
-        if (!spawner.finishTransform) return;
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
-        spawned = true;
+    private void Start()
+    {
+        if (player == null) player = Object.FindFirstObjectByType<PlayerController>()?.transform;
+        if (followCamera == null) followCamera = Camera.main != null ? Camera.main.GetComponent<FollowCamera>() : null;
 
-        float startY = player.position.y + minAbovePlayer;
-        float endY = spawner.finishTransform.position.y - marginBelowFinish;
-        if (endY <= startY) endY = startY + 20f;
+        _nextSpawnY = player != null ? player.position.y + spawnStepY : spawnStepY;
+        _activeCount = 0;
+        _stopped = false;
+    }
 
-        float step = (endY - startY) / Mathf.Max(1, count);
+    private void Update()
+    {
+        if (_stopped) return;
+        if (GameManager.Instance != null && GameManager.Instance.HasEnded) return;
+        if (player == null) return;
 
-        for (int i = 0; i < count; i++)
+        // Spawn ahead as player climbs.
+        float py = player.position.y;
+        while (_activeCount < maxActive && py + (spawnStepY * 3f) >= _nextSpawnY)
         {
-            float y = startY + step * (i + 0.5f) + Random.Range(-step * 0.25f, step * 0.25f);
-            float x = Random.Range(minX, maxX);
+            SpawnAt(_nextSpawnY);
+            _nextSpawnY += spawnStepY;
+        }
 
-            var go = Instantiate(circlePrefab, new Vector3(x, y, fixedZ), Quaternion.identity, transform);
-            var cc = go.GetComponent<InfoCollectible>();
-            if (cc) cc.id = i + 1; // 1..5
+        // Cheap cleanup behind camera: if camera exists, periodically prune by destroying far-below objects.
+        // (No search loops here; cleanup responsibility is on collectibles via standard lifetime/scene pooling if needed.)
+    }
+
+    public void StopSpawning() => _stopped = true;
+
+    private void SpawnAt(float y)
+    {
+        var prefab = (Random.value < minusChance) ? securityMinusPrefab : securityPlusPrefab;
+        if (prefab == null) return;
+
+        float x = Random.Range(-xRange, xRange);
+        Vector3 pos = new(x, y, 0f);
+
+        var inst = Instantiate(prefab, pos, Quaternion.identity);
+        _activeCount++;
+
+        // Decrement active count when destroyed.
+        // Avoid allocating a closure by using a tiny helper component.
+        var hook = inst.gameObject.AddComponent<DestroyHook>();
+        hook.Init(this);
+    }
+
+    private sealed class DestroyHook : MonoBehaviour
+    {
+        private InfoSpawner _owner;
+        public void Init(InfoSpawner owner) => _owner = owner;
+
+        private void OnDestroy()
+        {
+            if (_owner != null) _owner._activeCount = Mathf.Max(0, _owner._activeCount - 1);
         }
     }
 }

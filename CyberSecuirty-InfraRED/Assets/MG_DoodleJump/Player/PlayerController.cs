@@ -1,72 +1,97 @@
-// DoodleJumpPlayer3D_CC.cs
+// PlayerController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// DoodleJump-style 3D CharacterController.
+/// - New Input System (embedded InputAction, zero GC per-frame).
+/// - Bounce logic via OnControllerColliderHit (CharacterController correct).
+/// - One-way platforms supported (ignore while moving up).
+/// - Tracks last safe landing point for fall recovery.
+/// </summary>
 [RequireComponent(typeof(CharacterController))]
-public class DoodleJumpPlayer3D_CC : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class PlayerController : MonoBehaviour
 {
     [Header("Move")]
-    public float moveSpeed = 8f;
-    public float maxX = 6f;
-    public bool wrapHorizontal = true;
+    [SerializeField] private float moveSpeed = 8f;
+    [SerializeField] private float maxX = 6f;
+    [SerializeField] private bool wrapHorizontal = true;
 
     [Header("Gravity / Bounce")]
-    public float gravity = 30f;
-    public float extraFallGravity = 10f;
-    public float bounceVelocity = 12f;
+    [SerializeField] private float gravity = 30f;
+    [SerializeField] private float extraFallGravity = 10f;
+    [SerializeField] private float bounceVelocity = 12f;
 
     [Header("Platforms")]
-    public LayerMask platformMask;      // set to ONLY Platform layer
-    public bool oneWayPlatforms = true; // collide only while falling
-    public float minTopNormal = 0.5f;   // how "top" the hit must be
+    [Tooltip("Set to ONLY Platform layer.")]
+    [SerializeField] private LayerMask platformMask;
+    [SerializeField] private bool oneWayPlatforms = true;
+    [SerializeField, Range(0f, 1f)] private float minTopNormal = 0.5f;
 
-    CharacterController cc;
-    float vy;
+    [Header("Fall Recovery")]
+    [Tooltip("How high above last safe point to respawn.")]
+    [SerializeField] private float respawnYOffset = 2.5f;
+    [Tooltip("Up velocity given on respawn to re-enter gameplay.")]
+    [SerializeField] private float respawnUpVelocity = 10f;
 
-    InputAction moveAction;
-    float moveX;
+    private CharacterController _cc;
+    private float _vy;
 
-    int platformLayer = -1;
+    // Input (no PlayerInput component required)
+    private InputAction _moveAction;
+    private float _moveX;
 
-    void Awake()
+    // One-way platform collision toggle needs a single layer index
+    private int _platformLayer = -1;
+
+    // Last safe landing point (updated on bounce)
+    private Vector3 _lastSafePos;
+
+    public float VerticalVelocity => _vy;
+
+    private void Awake()
     {
-        cc = GetComponent<CharacterController>();
+        _cc = GetComponent<CharacterController>();
+        _lastSafePos = transform.position;
 
-        moveAction = new InputAction("Move", InputActionType.Value);
-        moveAction.AddCompositeBinding("1DAxis")
+        _moveAction = new InputAction("Move", InputActionType.Value);
+        _moveAction.AddCompositeBinding("1DAxis")
             .With("Negative", "<Keyboard>/a")
             .With("Negative", "<Keyboard>/leftArrow")
             .With("Positive", "<Keyboard>/d")
             .With("Positive", "<Keyboard>/rightArrow");
-        moveAction.AddBinding("<Gamepad>/leftStick/x");
+        _moveAction.AddBinding("<Gamepad>/leftStick/x");
 
-        moveAction.performed += ctx => moveX = ctx.ReadValue<float>();
-        moveAction.canceled += _ => moveX = 0f;
+        _moveAction.performed += ctx => _moveX = ctx.ReadValue<float>();
+        _moveAction.canceled += _ => _moveX = 0f;
 
-        platformLayer = LayerMaskToSingleLayer(platformMask);
+        _platformLayer = LayerMaskToSingleLayer(platformMask);
     }
 
-    void OnEnable() => moveAction.Enable();
-    void OnDisable() => moveAction.Disable();
+    private void OnEnable() => _moveAction.Enable();
+    private void OnDisable() => _moveAction.Disable();
 
-    void Update()
+    private void Update()
     {
-        // One-way: disable collisions while going up
-        if (oneWayPlatforms && platformLayer >= 0)
-            Physics.IgnoreLayerCollision(gameObject.layer, platformLayer, vy > 0f);
+        if (GameManager.Instance != null && GameManager.Instance.HasEnded) return;
 
-        // gravity
-        float g = gravity + (vy < 0f ? extraFallGravity : 0f);
-        vy -= g * Time.deltaTime;
+        // One-way: ignore platform collisions while moving upward.
+        if (oneWayPlatforms && _platformLayer >= 0)
+            Physics.IgnoreLayerCollision(gameObject.layer, _platformLayer, _vy > 0f);
 
-        // horizontal + vertical move
-        Vector3 motion = new Vector3(moveX * moveSpeed, vy, 0f);
-        cc.Move(motion * Time.deltaTime);
+        // Gravity.
+        float g = gravity + (_vy < 0f ? extraFallGravity : 0f);
+        _vy -= g * Time.deltaTime;
 
-        // keep small downward when grounded so CC stays grounded (prevents floating)
-        if (cc.isGrounded && vy < 0f) vy = -2f;
+        // Move CC.
+        Vector3 motion = new(_moveX * moveSpeed, _vy, 0f);
+        _cc.Move(motion * Time.deltaTime);
 
-        // wrap
+        // Keep slight downward force when grounded so CC stays grounded.
+        if (_cc.isGrounded && _vy < 0f) _vy = -2f;
+
+        // Horizontal wrap (your original behavior).
         if (wrapHorizontal)
         {
             Vector3 p = transform.position;
@@ -76,20 +101,40 @@ public class DoodleJumpPlayer3D_CC : MonoBehaviour
         }
     }
 
-    void OnControllerColliderHit(ControllerColliderHit hit)
+    private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        // Bounce only when falling, hitting the TOP of a platform layer collider
-        if (vy > 0f) return;
+        // Bounce only when falling AND landing on top of a platform layer collider.
+        if (_vy > 0f) return;
         if (hit.normal.y < minTopNormal) return;
         if (((1 << hit.gameObject.layer) & platformMask.value) == 0) return;
 
-        vy = bounceVelocity;
+        _vy = bounceVelocity;
 
-        var plat = hit.collider.GetComponent<Platform3D>();
-        if (plat) plat.OnPlayerBounced();
+        // Record last safe point at landing (used for fall recover).
+        _lastSafePos = transform.position;
+
+        // Optional platform behavior.
+        var plat = hit.collider.GetComponent<Platform>();
+        if (plat != null) plat.OnPlayerBounced();
     }
 
-    int LayerMaskToSingleLayer(LayerMask mask)
+    /// <summary>
+    /// Called by GameManager after fall penalty (if still alive).
+    /// Teleport is intentional recovery, but gameplay continues via upward velocity.
+    /// </summary>
+    public void RecoverFromFall()
+    {
+        Vector3 pos = _lastSafePos;
+        pos.y += respawnYOffset;
+
+        _vy = respawnUpVelocity;
+
+        _cc.enabled = false;
+        transform.position = pos;
+        _cc.enabled = true;
+    }
+
+    private static int LayerMaskToSingleLayer(LayerMask mask)
     {
         int v = mask.value;
         if (v == 0) return -1;
