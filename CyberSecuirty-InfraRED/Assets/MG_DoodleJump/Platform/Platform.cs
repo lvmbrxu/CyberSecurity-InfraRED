@@ -1,18 +1,24 @@
-// Platform3D.cs
+// Platform.cs
 using UnityEngine;
 
+/// <summary>
+/// Platform landing surface.
+/// - CharacterController bounce is handled in the Player (OnControllerColliderHit).
+/// - This script only handles platform-specific behaviors (break, etc).
+/// </summary>
 [RequireComponent(typeof(Collider))]
-public class Platform3D : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class Platform : MonoBehaviour
 {
-    public bool breaks = false;
-    public float breakDelay = 0.05f;
+    [Header("Breakable")]
+    [SerializeField] private bool breaks = false;
+    [SerializeField, Min(0f)] private float breakDelay = 0.05f;
 
-    bool used;
+    private bool _used;
 
-    void Awake()
+    private void Awake()
     {
-        // Best: no Rigidbody at all on platforms.
-        // If one exists, force it to be immovable.
+        // Ensure stable collision surface.
         if (TryGetComponent<Rigidbody>(out var rb))
         {
             rb.isKinematic = true;
@@ -20,17 +26,16 @@ public class Platform3D : MonoBehaviour
             rb.constraints = RigidbodyConstraints.FreezeAll;
         }
 
-        // Never be a trigger (we want a real landing surface)
         var col = GetComponent<Collider>();
         col.isTrigger = false;
     }
 
     public void OnPlayerBounced()
     {
-        if (!breaks || used) return;
-        used = true;
+        if (!breaks || _used) return;
+        _used = true;
         Invoke(nameof(BreakNow), breakDelay);
     }
 
-    void BreakNow() => Destroy(gameObject);
+    private void BreakNow() => Destroy(gameObject);
 }
