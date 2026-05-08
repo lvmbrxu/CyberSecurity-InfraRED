@@ -1319,6 +1319,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: Menu Text
       objectReference: {fileID: 0}
+    - target: {fileID: 4783999811277103464, guid: 6754a33f063aedc4ea29b43d12166dd7, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 45bdd71e708edf64585e4fa0403146f4, type: 2}
+    - target: {fileID: 4783999811277103464, guid: 6754a33f063aedc4ea29b43d12166dd7, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4783999811277103464, guid: 6754a33f063aedc4ea29b43d12166dd7, type: 3}
+      propertyPath: m_TextWrappingMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6556520661812764807, guid: 6754a33f063aedc4ea29b43d12166dd7, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -2014,6 +2026,38 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 486579968}
     m_Modifications:
+    - target: {fileID: 477860181779191975, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 45bdd71e708edf64585e4fa0403146f4, type: 2}
+    - target: {fileID: 477860181779191975, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 477860181779191975, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_TextWrappingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 477860181779191975, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 856314138361010165, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 45bdd71e708edf64585e4fa0403146f4, type: 2}
+    - target: {fileID: 856314138361010165, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 856314138361010165, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_TextWrappingMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 856314138361010165, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2284163636541277247, guid: e06f67a499851134084a5abdf45b40a9, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
