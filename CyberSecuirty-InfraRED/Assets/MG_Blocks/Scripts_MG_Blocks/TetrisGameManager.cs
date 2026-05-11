@@ -43,6 +43,11 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Header("UI")]
     public UIScript ui;
 
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip pickupBlockSound;
+    public AudioClip placeBlockSound;
+
     // Public access used by PieceView
     public float CellSize => cellSize;
     public float GridZ => gridZ;
@@ -72,12 +77,27 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (!cam) cam = Camera.main;
         rng = (seed == 0) ? new System.Random() : new System.Random(seed);
 
+        if (!audioSource)
+            audioSource = GetComponent<AudioSource>();
+
         occ = new bool[width, height];
         clueOcc = new bool[width, height];
         placedVisual = new GameObject[width, height];
 
         BuildGridVisuals();
         SpawnNextPieceOrGameOver();
+    }
+
+    public void PlayPickupSound()
+    {
+        if (audioSource && pickupBlockSound)
+            audioSource.PlayOneShot(pickupBlockSound);
+    }
+
+    public void PlayPlaceSound()
+    {
+        if (audioSource && placeBlockSound)
+            audioSource.PlayOneShot(placeBlockSound);
     }
 
     public Vector3 GridToWorld(Vector2Int g)
@@ -226,6 +246,9 @@ public sealed class TetrisGameManager : MonoBehaviour
             return false;
 
         CommitPlacement(currentShape, currentShapeIsClue, anchor);
+
+        PlayPlaceSound();
+
         ClearLinesAndAwardClues();
 
         if (!ended && cluesFound >= cluesToCollect)
