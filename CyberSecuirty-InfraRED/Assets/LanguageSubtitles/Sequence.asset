@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Dialogue.DialogueSequence
   lines:
   - {fileID: 11400000, guid: 028faf28b40ed524eb9915330094ad54, type: 2}
+  - {fileID: 11400000, guid: 028faf28b40ed524eb9915330094ad54, type: 2}

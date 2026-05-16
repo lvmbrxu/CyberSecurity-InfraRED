@@ -6865,6 +6865,10 @@ PrefabInstance:
       value: ExitScene
       objectReference: {fileID: 0}
     - target: {fileID: 5114306151418562431, guid: f493173b8a00af2418901290f2e7c028, type: 3}
+      propertyPath: m_text
+      value: EXIT TO MAIN MENU
+      objectReference: {fileID: 0}
+    - target: {fileID: 5114306151418562431, guid: f493173b8a00af2418901290f2e7c028, type: 3}
       propertyPath: m_fontSize
       value: 14
       objectReference: {fileID: 0}
