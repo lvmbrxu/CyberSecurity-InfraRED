@@ -90,6 +90,8 @@ public sealed class PieceView : MonoBehaviour
             {
                 dragging = true;
                 hasAnchor = false;
+
+                game.PlayPickupSound();
             }
         }
 
