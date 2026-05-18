@@ -501,10 +501,14 @@ PrefabInstance:
       propertyPath: bounceVelocity
       value: 2
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 238173720700494319, guid: 670cc50d0d8adfc45b34b22790a0970f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4635515379836692887, guid: 670cc50d0d8adfc45b34b22790a0970f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2111219084}
   m_SourcePrefab: {fileID: 100100000, guid: 670cc50d0d8adfc45b34b22790a0970f, type: 3}
 --- !u!1 &370891565
 GameObject:
@@ -2220,19 +2224,8 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 8
+  m_Constraints: 120
   m_CollisionDetection: 0
---- !u!114 &1701509025 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1672738674582618414, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
-  m_PrefabInstance: {fileID: 2138302956}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1701509017}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 63424d91d1c88c44eb77fe74ad3ae8c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController3D_NewInput
 --- !u!1 &1788614633
 GameObject:
   m_ObjectHideFlags: 0
@@ -2285,7 +2278,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a645f1b97e79d547b3169a8f1d52659, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  player: {fileID: 1701509025}
+  player: {fileID: 0}
   followCam: {fileID: 542958480}
   securitySlider: {fileID: 1494707904}
   securityPercentText: {fileID: 1611303967}
@@ -2635,6 +2628,20 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4635515379836692887, guid: 670cc50d0d8adfc45b34b22790a0970f, type: 3}
   m_PrefabInstance: {fileID: 331189961}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2111219084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111219078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0737064d4bdbb3e40b6ac7cfa76775a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Platform
+  breaks: 0
+  breakDelay: 0.05
 --- !u!1001 &2138302956
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2678,6 +2685,14 @@ PrefabInstance:
     - target: {fileID: 1765575540703201812, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
       propertyPath: m_IsTrigger
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352234422641780769, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+      propertyPath: gravity
+      value: 17.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352234422641780769, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+      propertyPath: platformMask.m_Bits
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 6961271934742157308, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
       propertyPath: m_LocalPosition.x
