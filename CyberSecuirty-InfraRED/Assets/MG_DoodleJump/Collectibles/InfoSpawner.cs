@@ -13,7 +13,7 @@ public sealed class InfoSpawner : MonoBehaviour
 
     [Header("Refs")]
     [SerializeField] private Transform player;
-    [SerializeField] private FollowCamera followCamera;
+    [SerializeField] private FollowCameraY followCamera;
 
     [Header("Prefabs")]
     [SerializeField] private InfoCollectible securityPlusPrefab;
@@ -39,8 +39,8 @@ public sealed class InfoSpawner : MonoBehaviour
 
     private void Start()
     {
-        if (player == null) player = Object.FindFirstObjectByType<PlayerController>()?.transform;
-        if (followCamera == null) followCamera = Camera.main != null ? Camera.main.GetComponent<FollowCamera>() : null;
+        if (player == null) player = Object.FindFirstObjectByType<DoodleJumpPlayer3D_CC>()?.transform;
+        if (followCamera == null) followCamera = Camera.main != null ? Camera.main.GetComponent<FollowCameraY>() : null;
 
         _nextSpawnY = player != null ? player.position.y + spawnStepY : spawnStepY;
         _activeCount = 0;

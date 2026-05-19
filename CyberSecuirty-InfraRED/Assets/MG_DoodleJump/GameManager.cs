@@ -1,16 +1,15 @@
-// GameManager.cs
+// GameManager.cs (debounced fall penalty)
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using TMPro;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// Security-driven game loop.
-/// - Security increases with upward progress (max Y).
-/// - Pickups add/sub security.
-/// - Falling below screen removes fixed security and recovers (no death).
-/// - Only when security hits 0% => Die.
-/// - At 100% => Win and stop spawners.
+/// Security-driven loop.
+/// - Security (0..1): distance + pickups.
+/// - Fall: -security ONCE per fall, recover if > 0.
+/// - Death only at 0.
+/// - Win at 1 (spawners stop).
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class GameManager : MonoBehaviour
@@ -18,11 +17,11 @@ public sealed class GameManager : MonoBehaviour
     public static GameManager Instance { get; private set; }
 
     [Header("Refs")]
-    [SerializeField] private PlayerController player;
-    [SerializeField] private FollowCamera followCam;
+    [SerializeField] private DoodleJumpPlayer3D_CC player;
+    [SerializeField] private FollowCameraY followCam;
 
     [Header("UI")]
-    [SerializeField] private Slider securitySlider;     // Min=0 Max=1
+    [SerializeField] private Slider securitySlider; // Min=0 Max=1
     [SerializeField] private TMP_Text securityPercentText;
 
     [Header("Panels")]
@@ -32,16 +31,22 @@ public sealed class GameManager : MonoBehaviour
     [Header("Security")]
     [SerializeField, Range(0f, 1f)] private float startSecurity01 = 0.25f;
     [SerializeField, Range(0.01f, 1f)] private float fallPenalty01 = 0.10f;
-    [Tooltip("World units of upward progress required to reach 100% via distance alone.")]
-    [SerializeField, Min(1f)] private float unitsToFullSecurity = 120f;
+    [SerializeField, Min(1f)] private float unitsToFullSecurity = 450f;
 
-    [Header("Fall check")]
-    [SerializeField, Min(0f)] private float killBelowScreen = 2.5f;
+    [Header("Fall Rules")]
+    [Tooltip("How far below the camera bottom counts as a fall.")]
+    [SerializeField, Min(0f)] private float fallBelowScreen = 2.5f;
+
+    [Tooltip("How far ABOVE the fall line the player must return before another fall can be counted.")]
+    [SerializeField, Min(0f)] private float fallUnlockMargin = 1.5f;
 
     private float _security01;
     private float _runStartY;
     private float _maxY;
     private bool _ended;
+
+    // Debounce: true after a fall is processed; cleared once player is safely back above the threshold.
+    private bool _fallLock;
 
     public bool HasEnded => _ended;
     public float Security01 => _security01;
@@ -51,20 +56,20 @@ public sealed class GameManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-
         Time.timeScale = 1f;
     }
 
     private void Start()
     {
-        if (player == null) player = FindFirstObjectByType<PlayerController>();
-        if (followCam == null) followCam = Camera.main != null ? Camera.main.GetComponent<FollowCamera>() : null;
+        if (player == null) player = FindFirstObjectByType<DoodleJumpPlayer3D_CC>();
+        if (followCam == null) followCam = Camera.main != null ? Camera.main.GetComponent<FollowCameraY>() : null;
 
         if (deathPanel) deathPanel.SetActive(false);
         if (winPanel) winPanel.SetActive(false);
 
         _runStartY = player != null ? player.transform.position.y : 0f;
         _maxY = _runStartY;
+        _fallLock = false;
 
         SetSecurity(startSecurity01, force: true);
     }
@@ -74,24 +79,27 @@ public sealed class GameManager : MonoBehaviour
         if (_ended) return;
         if (player == null || followCam == null) return;
 
-        // Distance-based security: uses highest Y only (no farming via falling).
+        // Distance-based security uses maxY only.
         float y = player.transform.position.y;
         if (y > _maxY)
         {
             _maxY = y;
-
-            float dist = _maxY - _runStartY;
-            float dist01 = Mathf.Clamp01(dist / unitsToFullSecurity);
-
-            // Only push up to distance value (pickups can still exceed it).
-            if (dist01 > _security01)
-                SetSecurity(dist01);
+            float dist01 = Mathf.Clamp01((_maxY - _runStartY) / unitsToFullSecurity);
+            if (dist01 > _security01) SetSecurity(dist01);
         }
 
-        // Fall check: penalty + recover; death only at 0%.
+        // Fall evaluation.
         float bottomY = followCam.BottomY;
-        if (player.transform.position.y < bottomY - killBelowScreen)
+        float fallLine = bottomY - fallBelowScreen;
+
+        // Unlock once the player is safely above the fall line again.
+        if (_fallLock && y > (fallLine + fallUnlockMargin))
+            _fallLock = false;
+
+        // Process fall ONCE.
+        if (!_fallLock && y < fallLine)
         {
+            _fallLock = true;
             ApplyFallPenaltyAndRecover();
         }
     }
@@ -114,6 +122,7 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
+        // Recovery teleports the player back to last safe position (player script).
         player.RecoverFromFall();
     }
 
@@ -127,8 +136,7 @@ public sealed class GameManager : MonoBehaviour
         if (securitySlider) securitySlider.value = _security01;
         if (securityPercentText) securityPercentText.text = Mathf.RoundToInt(_security01 * 100f) + "%";
 
-        if (_security01 >= 1f)
-            Win();
+        if (_security01 >= 1f) Win();
     }
 
     public void Die()

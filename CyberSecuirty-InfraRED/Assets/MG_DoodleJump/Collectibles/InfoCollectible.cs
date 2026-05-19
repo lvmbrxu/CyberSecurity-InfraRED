@@ -1,34 +1,62 @@
-// InfoCollectible.cs
+// InfoCollectible.cs (Security +/- pickup, CharacterController-safe)
 using UnityEngine;
 
 /// <summary>
 /// Security pickup.
-/// Positive delta => Security+
-/// Negative delta => Security-
+/// - Uses trigger volume + kinematic rigidbody for reliable trigger callbacks with CharacterController.
+/// - Requires Player to have tag "Player".
 /// </summary>
-[RequireComponent(typeof(Collider))]
 [DisallowMultipleComponent]
+[RequireComponent(typeof(Collider))]
 public sealed class InfoCollectible : MonoBehaviour
 {
     [Tooltip("+0.05 = +5%, -0.10 = -10%")]
     [SerializeField] private float securityDelta01 = 0.05f;
 
-    private void Reset()
+    [Header("Optional")]
+    [SerializeField] private AudioSource sfx;
+
+    private bool _collected;
+
+    private void Awake()
     {
-        var c = GetComponent<Collider>();
-        c.isTrigger = true;
+        // Ensure trigger.
+        var col = GetComponent<Collider>();
+        col.isTrigger = true;
+
+        // Ensure a Rigidbody exists so triggers are consistent with CharacterController.
+        if (!TryGetComponent<Rigidbody>(out var rb))
+            rb = gameObject.AddComponent<Rigidbody>();
+
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (GameManager.Instance == null) return;
+        if (_collected) return;
 
-        var player = GameManager.Instance.GetComponent<GameManager>().GetComponent<GameManager>(); // no-op safety (keeps designer from wiring wrong object)
-        // Correct player check:
-        var p = FindFirstObjectByType<PlayerController>();
-        if (!p || other.transform != p.transform) return;
+        // Must be player.
+        if (!other.CompareTag("Player")) return;
 
-        GameManager.Instance.AddSecurityDelta01(securityDelta01);
-        Destroy(gameObject);
+        _collected = true;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.AddSecurityDelta01(securityDelta01);
+
+        // Disable immediately to prevent double triggers.
+        if (TryGetComponent<Collider>(out var c)) c.enabled = false;
+        foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+
+        if (sfx != null)
+        {
+            sfx.Play();
+            Destroy(gameObject, sfx.clip != null ? sfx.clip.length : 0f);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 }

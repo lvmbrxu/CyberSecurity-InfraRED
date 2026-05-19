@@ -2,12 +2,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Up-only follow camera (your original logic).
+/// Up-only follow camera.
 /// - Moves camera Y up to target+offset, never down.
-/// - BottomY uses camera projection (ortho or perspective).
+/// - BottomY uses ortho size if orthographic (recommended).
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class FollowCamera : MonoBehaviour
+public sealed class FollowCameraY : MonoBehaviour
 {
     [SerializeField] private Transform target;
     [SerializeField] private float minY = 0f;
@@ -23,8 +23,7 @@ public sealed class FollowCamera : MonoBehaviour
             if (_cam != null && _cam.orthographic)
                 return transform.position.y - _cam.orthographicSize;
 
-            // Perspective fallback: viewport bottom at some depth; use near-plane approximation.
-            // For fall-kill checks we just need a stable "below screen" threshold.
+            // Perspective fallback (stable threshold, not pixel-accurate).
             return transform.position.y - 10f;
         }
     }

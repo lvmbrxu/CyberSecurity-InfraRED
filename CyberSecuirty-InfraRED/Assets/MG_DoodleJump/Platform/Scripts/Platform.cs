@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 [RequireComponent(typeof(Collider))]
 [DisallowMultipleComponent]
-public sealed class Platform : MonoBehaviour
+public sealed class Platform3D : MonoBehaviour
 {
     [Header("Breakable")]
     [SerializeField] private bool breaks = false;
@@ -18,7 +18,7 @@ public sealed class Platform : MonoBehaviour
 
     private void Awake()
     {
-        // Ensure stable collision surface.
+        // Stable collision surface (avoid physics impulses).
         if (TryGetComponent<Rigidbody>(out var rb))
         {
             rb.isKinematic = true;
