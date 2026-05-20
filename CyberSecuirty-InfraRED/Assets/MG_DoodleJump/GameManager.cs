@@ -1,4 +1,4 @@
-// GameManager.cs (debounced fall penalty)
+// GameManager.cs (add clue tracking + UI hooks)
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -6,11 +6,11 @@ using TMPro;
 
 /// <summary>
 /// Security-driven loop.
-/// - Security (0..1): distance + pickups.
-/// - Fall: -security ONCE per fall, recover if > 0.
-/// - Death only at 0.
-/// - Win at 1 (spawners stop).
+/// - Security (0..1) increases with maxY progress + pickups.
+/// - Falling applies penalty ONCE per fall, then respawns if Security > 0.
+/// - Death only at 0, Win at 1.
 /// </summary>
+
 [DisallowMultipleComponent]
 public sealed class GameManager : MonoBehaviour
 {
@@ -20,9 +20,13 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private DoodleJumpPlayer3D_CC player;
     [SerializeField] private FollowCameraY followCam;
 
-    [Header("UI")]
-    [SerializeField] private Slider securitySlider; // Min=0 Max=1
+    [Header("UI - Security")]
+    [SerializeField] private Slider securitySlider;
     [SerializeField] private TMP_Text securityPercentText;
+
+    [Header("UI - Clues")]
+    [Tooltip("Example: 'Clues: 0/3'")]
+    [SerializeField] private TMP_Text clueCountText;
 
     [Header("Panels")]
     [SerializeField] private GameObject deathPanel;
@@ -31,26 +35,28 @@ public sealed class GameManager : MonoBehaviour
     [Header("Security")]
     [SerializeField, Range(0f, 1f)] private float startSecurity01 = 0.25f;
     [SerializeField, Range(0.01f, 1f)] private float fallPenalty01 = 0.10f;
-    [SerializeField, Min(1f)] private float unitsToFullSecurity = 450f;
+    [SerializeField, Min(1f)] private float unitsToFullSecurity = 900f;
 
     [Header("Fall Rules")]
-    [Tooltip("How far below the camera bottom counts as a fall.")]
     [SerializeField, Min(0f)] private float fallBelowScreen = 2.5f;
-
-    [Tooltip("How far ABOVE the fall line the player must return before another fall can be counted.")]
     [SerializeField, Min(0f)] private float fallUnlockMargin = 1.5f;
+
+    [Header("Clues")]
+    [Tooltip("Total clues possible in the run (matches max special platforms).")]
+    [SerializeField, Min(0)] private int totalClues = 3;
 
     private float _security01;
     private float _runStartY;
     private float _maxY;
     private bool _ended;
-
-    // Debounce: true after a fall is processed; cleared once player is safely back above the threshold.
     private bool _fallLock;
+
+    private int _cluesCollected;
 
     public bool HasEnded => _ended;
     public float Security01 => _security01;
-    public float TargetEndY => _runStartY + unitsToFullSecurity;
+    public int CluesCollected => _cluesCollected;
+    public int TotalClues => totalClues;
 
     private void Awake()
     {
@@ -71,6 +77,9 @@ public sealed class GameManager : MonoBehaviour
         _maxY = _runStartY;
         _fallLock = false;
 
+        _cluesCollected = 0;
+        UpdateClueUI();
+
         SetSecurity(startSecurity01, force: true);
     }
 
@@ -79,8 +88,9 @@ public sealed class GameManager : MonoBehaviour
         if (_ended) return;
         if (player == null || followCam == null) return;
 
-        // Distance-based security uses maxY only.
         float y = player.transform.position.y;
+
+        // Distance-based security uses maxY only.
         if (y > _maxY)
         {
             _maxY = y;
@@ -88,15 +98,12 @@ public sealed class GameManager : MonoBehaviour
             if (dist01 > _security01) SetSecurity(dist01);
         }
 
-        // Fall evaluation.
-        float bottomY = followCam.BottomY;
-        float fallLine = bottomY - fallBelowScreen;
+        // Debounced fall.
+        float fallLine = followCam.BottomY - fallBelowScreen;
 
-        // Unlock once the player is safely above the fall line again.
         if (_fallLock && y > (fallLine + fallUnlockMargin))
             _fallLock = false;
 
-        // Process fall ONCE.
         if (!_fallLock && y < fallLine)
         {
             _fallLock = true;
@@ -104,6 +111,7 @@ public sealed class GameManager : MonoBehaviour
         }
     }
 
+    // --- Security API ---
     public void AddSecurityDelta01(float delta01)
     {
         if (_ended) return;
@@ -122,7 +130,6 @@ public sealed class GameManager : MonoBehaviour
             return;
         }
 
-        // Recovery teleports the player back to last safe position (player script).
         player.RecoverFromFall();
     }
 
@@ -139,6 +146,22 @@ public sealed class GameManager : MonoBehaviour
         if (_security01 >= 1f) Win();
     }
 
+    // --- Clue API ---
+    public void OnClueCollected()
+    {
+        if (_ended) return;
+
+        _cluesCollected = Mathf.Clamp(_cluesCollected + 1, 0, totalClues);
+        UpdateClueUI();
+    }
+
+    private void UpdateClueUI()
+    {
+        if (clueCountText != null)
+            clueCountText.text = $"Clues: {_cluesCollected}/{totalClues}";
+    }
+
+    // --- Flow ---
     public void Die()
     {
         if (_ended) return;
@@ -148,6 +171,7 @@ public sealed class GameManager : MonoBehaviour
         if (deathPanel) deathPanel.SetActive(true);
 
         PlatformSpawner.Instance?.StopSpawning();
+        InfoSpawner.Instance?.StopSpawning();
     }
 
     public void Win()
@@ -159,6 +183,7 @@ public sealed class GameManager : MonoBehaviour
         if (winPanel) winPanel.SetActive(true);
 
         PlatformSpawner.Instance?.StopSpawning();
+        InfoSpawner.Instance?.StopSpawning();
     }
 
     public void Restart()

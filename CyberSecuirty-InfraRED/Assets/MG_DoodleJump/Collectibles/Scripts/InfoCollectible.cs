@@ -1,10 +1,11 @@
-// InfoCollectible.cs (Security +/- pickup, CharacterController-safe)
+// InfoCollectible.cs (Security +/- pickup, production)
 using UnityEngine;
 
 /// <summary>
 /// Security pickup.
-/// - Uses trigger volume + kinematic rigidbody for reliable trigger callbacks with CharacterController.
-/// - Requires Player to have tag "Player".
+/// - Adds/subtracts Security via GameManager.
+/// - CharacterController-safe: trigger + kinematic Rigidbody.
+/// - Player detection by component (supports child colliders).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
@@ -20,11 +21,9 @@ public sealed class InfoCollectible : MonoBehaviour
 
     private void Awake()
     {
-        // Ensure trigger.
         var col = GetComponent<Collider>();
         col.isTrigger = true;
 
-        // Ensure a Rigidbody exists so triggers are consistent with CharacterController.
         if (!TryGetComponent<Rigidbody>(out var rb))
             rb = gameObject.AddComponent<Rigidbody>();
 
@@ -37,22 +36,19 @@ public sealed class InfoCollectible : MonoBehaviour
     {
         if (_collected) return;
 
-        // Must be player.
-        if (!other.CompareTag("Player")) return;
+        if (other.GetComponentInParent<DoodleJumpPlayer3D_CC>() == null) return;
 
         _collected = true;
 
-        if (GameManager.Instance != null)
-            GameManager.Instance.AddSecurityDelta01(securityDelta01);
+        GameManager.Instance?.AddSecurityDelta01(securityDelta01);
 
-        // Disable immediately to prevent double triggers.
         if (TryGetComponent<Collider>(out var c)) c.enabled = false;
-        foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+        foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
 
         if (sfx != null)
         {
             sfx.Play();
-            Destroy(gameObject, sfx.clip != null ? sfx.clip.length : 0f);
+            Destroy(gameObject, (sfx.clip != null) ? sfx.clip.length : 0f);
         }
         else
         {

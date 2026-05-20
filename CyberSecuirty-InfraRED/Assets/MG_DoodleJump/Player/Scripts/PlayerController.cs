@@ -2,6 +2,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// CharacterController-driven vertical runner.
+/// - New Input System (embedded InputAction).
+/// - Clamp or wrap horizontal bounds.
+/// - Bounce via OnControllerColliderHit (top-only landing filter).
+/// - RecoverFromFall teleports to last safe landing and injects upward velocity.
+/// </summary>
 [RequireComponent(typeof(CharacterController))]
 [DisallowMultipleComponent]
 public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
@@ -44,6 +51,7 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
     private Vector3 _lastSafePos;
 
     public float XLimit => xLimit;
+    public float VerticalVelocity => _vy;
 
     private void Awake()
     {

@@ -3,8 +3,9 @@ using UnityEngine;
 
 /// <summary>
 /// Spawns Security +/- collectibles along the climb.
-/// - No per-frame allocations.
-/// - Stops when GameManager ends or when explicitly stopped.
+/// - Spawns ahead of player based on Y.
+/// - Caps active count.
+/// - Stops when GameManager ends.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class InfoSpawner : MonoBehaviour
@@ -13,7 +14,6 @@ public sealed class InfoSpawner : MonoBehaviour
 
     [Header("Refs")]
     [SerializeField] private Transform player;
-    [SerializeField] private FollowCameraY followCamera;
 
     [Header("Prefabs")]
     [SerializeField] private InfoCollectible securityPlusPrefab;
@@ -40,7 +40,6 @@ public sealed class InfoSpawner : MonoBehaviour
     private void Start()
     {
         if (player == null) player = Object.FindFirstObjectByType<DoodleJumpPlayer3D_CC>()?.transform;
-        if (followCamera == null) followCamera = Camera.main != null ? Camera.main.GetComponent<FollowCameraY>() : null;
 
         _nextSpawnY = player != null ? player.position.y + spawnStepY : spawnStepY;
         _activeCount = 0;
@@ -53,16 +52,13 @@ public sealed class InfoSpawner : MonoBehaviour
         if (GameManager.Instance != null && GameManager.Instance.HasEnded) return;
         if (player == null) return;
 
-        // Spawn ahead as player climbs.
         float py = player.position.y;
+
         while (_activeCount < maxActive && py + (spawnStepY * 3f) >= _nextSpawnY)
         {
             SpawnAt(_nextSpawnY);
             _nextSpawnY += spawnStepY;
         }
-
-        // Cheap cleanup behind camera: if camera exists, periodically prune by destroying far-below objects.
-        // (No search loops here; cleanup responsibility is on collectibles via standard lifetime/scene pooling if needed.)
     }
 
     public void StopSpawning() => _stopped = true;
@@ -78,8 +74,6 @@ public sealed class InfoSpawner : MonoBehaviour
         var inst = Instantiate(prefab, pos, Quaternion.identity);
         _activeCount++;
 
-        // Decrement active count when destroyed.
-        // Avoid allocating a closure by using a tiny helper component.
         var hook = inst.gameObject.AddComponent<DestroyHook>();
         hook.Init(this);
     }

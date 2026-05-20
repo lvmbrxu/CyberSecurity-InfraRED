@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Up-only follow camera.
-/// - Moves camera Y up to target+offset, never down.
-/// - BottomY uses ortho size if orthographic (recommended).
+/// - Camera Y follows target upward, never down.
+/// - BottomY provides a stable fall threshold.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class FollowCameraY : MonoBehaviour
@@ -23,8 +23,7 @@ public sealed class FollowCameraY : MonoBehaviour
             if (_cam != null && _cam.orthographic)
                 return transform.position.y - _cam.orthographicSize;
 
-            // Perspective fallback (stable threshold, not pixel-accurate).
-            return transform.position.y - 10f;
+            return transform.position.y - 10f; // perspective fallback
         }
     }
 

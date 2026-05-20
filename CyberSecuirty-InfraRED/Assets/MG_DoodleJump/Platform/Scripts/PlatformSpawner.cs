@@ -1,4 +1,7 @@
 // PlatformSpawner.cs
+// - Natural platform field spawns for the entire run (0% -> 100%).
+// - Special platforms unlock at Security >= 75%, are rare, max 3.
+// - Clues spawn ONLY on special platforms (always attaches to special).
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,14 +14,18 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField] private DoodleJumpPlayer3D_CC player;
     [SerializeField] private CharacterController playerController;
 
-    [Header("Prefabs")]
+    [Header("Platform Prefabs")]
     [SerializeField] private GameObject normalPlatformPrefab;
     [SerializeField] private GameObject specialPlatformPrefab;
+
+    [Header("Clue Prefab (SPECIAL ONLY)")]
+    [SerializeField] private GameObject cluePrefab;
+    [Tooltip("Extra height above platform collider top (world units).")]
+    [SerializeField, Min(0f)] private float clueWorldYOffset = 1.0f;
 
     [Header("Width (defaults to player XLimit)")]
     [Tooltip("If 0, uses player.XLimit.")]
     [SerializeField, Min(0f)] private float overrideXLimit = 0f;
-
     [SerializeField] private float fixedZ = 0f;
 
     [Header("Streaming")]
@@ -27,16 +34,16 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField, Min(50)] private int maxAlive = 240;
     [SerializeField, Min(1)] private int maxStepsPerFrame = 24;
 
-    [Header("Cadence")]
+    [Header("Cadence (Game Feel)")]
     [SerializeField, Min(0.5f)] private float avgGapY = 3.2f;
     [SerializeField, Min(0f)] private float gapJitterY = 0.55f;
 
-    [Header("Separation")]
+    [Header("Separation (Anti-Clump / Anti-Wedge)")]
     [SerializeField, Min(0.25f)] private float minSpacingX = 2.4f;
     [SerializeField, Min(0.5f)] private float minSpacingY = 2.8f;
     [SerializeField, Min(0f)] private float capsulePadding = 0.25f;
 
-    [Header("Placement Search")]
+    [Header("Placement Search (Throughput)")]
     [SerializeField, Range(1, 32)] private int attemptsPerBeat = 14;
     [SerializeField, Range(0f, 1f)] private float stableSearchBias = 0.55f;
 
@@ -48,9 +55,9 @@ public sealed class PlatformSpawner : MonoBehaviour
     [Header("Width / Lanes")]
     [SerializeField, Min(0)] private int extraPlatformsPerBeat = 1;
     [SerializeField, Min(0f)] private float laneMinXSpacing = 3.4f;
-    [SerializeField, Min(0f)] private float extraOffsetY = 0.8f;
+    [SerializeField, Min(0f)] private float laneOffsetY = 0.8f;
 
-    [Header("Special Platforms")]
+    [Header("Special Platforms (Unlock Late, Rare)")]
     [SerializeField, Range(0f, 1f)] private float specialGateSecurity01 = 0.75f;
     [SerializeField, Range(0f, 1f)] private float specialChancePerBeat = 0.015f;
     [SerializeField, Min(0)] private int maxSpecialSpawnCount = 3;
@@ -63,11 +70,16 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField, Min(0f)] private float startYOffset = 1.2f;
     [SerializeField, Min(0f)] private float startXJitter = 0.8f;
 
+    [Header("Debug")]
+    [SerializeField] private bool debugLogSpecialSpawns = false;
+
+    // ---- runtime ----
     private bool _stopped;
     private float _maxY;
     private float _nextY;
     private float _lastX;
     private float _noiseSeed;
+
     private int _specialSpawned;
 
     private float _xLimit;
@@ -96,6 +108,7 @@ public sealed class PlatformSpawner : MonoBehaviour
 
         if (laneMinXSpacing < minSpacingX) laneMinXSpacing = minSpacingX;
 
+        // Capsule-aware spacing to prevent wedging/push-off between cubes.
         if (playerController != null)
         {
             float capsuleMin = (playerController.radius * 2f) + capsulePadding;
@@ -103,6 +116,7 @@ public sealed class PlatformSpawner : MonoBehaviour
             if (laneMinXSpacing < minSpacingX) laneMinXSpacing = minSpacingX;
         }
 
+        // Cadence cannot be tighter than the clump window.
         if (avgGapY < minSpacingY) avgGapY = minSpacingY;
         gapJitterY = Mathf.Clamp(gapJitterY, 0f, avgGapY * 0.5f);
 
@@ -164,20 +178,24 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private void SpawnBeat(float y)
     {
+        // Main platform (required).
         if (!TryFindValidX(y, out float mainX))
             return;
 
-        bool mainIsSpecial = ShouldSpawnSpecialThisBeat();
-        PlaceAndRemember(mainX, y, force: false, useSpecial: mainIsSpecial);
+        // SPECIAL is just a skin/variant of a platform.
+        // Normal platforms continue throughout the entire run.
+        bool isSpecial = ShouldSpawnSpecialThisBeat();
+        PlaceAndRemember(mainX, y, force: false, useSpecial: isSpecial);
         _lastX = mainX;
 
+        // Lane platforms (always normal).
         float lastPlacedX = mainX;
         for (int i = 0; i < extraPlatformsPerBeat; i++)
         {
             if (!TryFindValidLaneX(y, mainX, lastPlacedX, out float laneX))
                 break;
 
-            float laneY = y + Random.Range(-extraOffsetY, extraOffsetY);
+            float laneY = y + Random.Range(-laneOffsetY, laneOffsetY);
             PlaceAndRemember(laneX, laneY, force: false, useSpecial: false);
             lastPlacedX = laneX;
         }
@@ -190,8 +208,11 @@ public sealed class PlatformSpawner : MonoBehaviour
 
         var gm = GameManager.Instance;
         if (gm == null) return false;
+
+        // Gate.
         if (gm.Security01 < specialGateSecurity01) return false;
 
+        // Rare chance.
         if (Random.value < specialChancePerBeat)
         {
             _specialSpawned++;
@@ -280,9 +301,18 @@ public sealed class PlatformSpawner : MonoBehaviour
         GameObject prefab = useSpecial ? specialPlatformPrefab : normalPlatformPrefab;
         if (prefab == null) prefab = normalPlatformPrefab;
 
-        Transform t = Instantiate(prefab, new Vector3(x, y, fixedZ), _rot).transform;
-        _alive.Enqueue(t);
+        Transform platform = Instantiate(prefab, new Vector3(x, y, fixedZ), _rot).transform;
 
+        // CLUE: ONLY on special platforms.
+        if (useSpecial && cluePrefab != null)
+        {
+            PlaceClueOnTop(platform);
+
+            if (debugLogSpecialSpawns)
+                Debug.Log($"[PlatformSpawner] Special+Clue @ y={y:F2} (specialCount={_specialSpawned})", this);
+        }
+
+        _alive.Enqueue(platform);
         Remember(x, y);
 
         while (_alive.Count > maxAlive)
@@ -290,6 +320,32 @@ public sealed class PlatformSpawner : MonoBehaviour
             Transform old = _alive.Dequeue();
             if (old != null) Destroy(old.gameObject);
         }
+    }
+
+    private void PlaceClueOnTop(Transform platformRoot)
+    {
+        // Spawn clue as child first so renderer bounds exist.
+        Transform clue = Instantiate(cluePrefab, platformRoot).transform;
+
+        // Find platform top via collider bounds.
+        var col = platformRoot.GetComponentInChildren<Collider>();
+        if (col == null)
+        {
+            clue.localPosition = new Vector3(0f, 1.5f, 0f);
+            clue.localRotation = Quaternion.identity;
+            return;
+        }
+
+        Bounds pb = col.bounds;
+
+        // Raise by clue half-height + designer offset so it doesn't clip.
+        float clueHalfHeight = 0f;
+        var r = clue.GetComponentInChildren<Renderer>();
+        if (r != null) clueHalfHeight = r.bounds.extents.y;
+
+        Vector3 worldPos = new Vector3(pb.center.x, pb.max.y + clueWorldYOffset + clueHalfHeight, pb.center.z);
+        clue.position = worldPos;
+        clue.localRotation = Quaternion.identity;
     }
 
     private void Remember(float x, float y)

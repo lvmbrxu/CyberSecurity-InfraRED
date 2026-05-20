@@ -2,9 +2,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Platform landing surface.
-/// - CharacterController bounce is handled in the Player (OnControllerColliderHit).
-/// - This script only handles platform-specific behaviors (break, etc).
+/// Platform behavior hook.
+/// - Player bounce is handled in DoodleJumpPlayer3D_CC via CharacterController hit.
+/// - This script is for platform-specific logic (break, etc).
 /// </summary>
 [RequireComponent(typeof(Collider))]
 [DisallowMultipleComponent]
@@ -18,7 +18,7 @@ public sealed class Platform3D : MonoBehaviour
 
     private void Awake()
     {
-        // Stable collision surface (avoid physics impulses).
+        // Stable collision surface (avoid physics impulses if a Rigidbody exists).
         if (TryGetComponent<Rigidbody>(out var rb))
         {
             rb.isKinematic = true;
@@ -26,8 +26,7 @@ public sealed class Platform3D : MonoBehaviour
             rb.constraints = RigidbodyConstraints.FreezeAll;
         }
 
-        var col = GetComponent<Collider>();
-        col.isTrigger = false;
+        GetComponent<Collider>().isTrigger = false;
     }
 
     public void OnPlayerBounced()
