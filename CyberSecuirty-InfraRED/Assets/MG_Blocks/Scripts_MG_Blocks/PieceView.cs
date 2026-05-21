@@ -1,5 +1,5 @@
 // PieceView.cs
-// Renders a piece where some blocks are "clue blocks" (black).
+// Renders ONE draggable piece (world space).
 // Snaps to integer anchor while dragging, drops by integer anchor.
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,39 +8,31 @@ using UnityEngine.InputSystem;
 public sealed class PieceView : MonoBehaviour
 {
     public Vector2Int[] Shape { get; private set; }
+    public Material PieceMaterial { get; private set; }
 
     TetrisGameManager game;
     readonly List<Transform> blocks = new();
 
     bool dragging;
-
     Vector2Int currentAnchor;
     bool hasAnchor;
 
     Vector3 pivotLocalOffset;
-
-    Color pieceColor;
-    Color clueColor;
-
-    bool[] isClue; // parallel to Shape
-
-    static readonly int ColorId = Shader.PropertyToID("_BaseColor");
-    static readonly int ColorIdAlt = Shader.PropertyToID("_Color");
+    Vector3 spawnWorld;
 
     public void Init(
         TetrisGameManager game,
         Vector2Int[] shape,
-        bool[] isClueMask,
         GameObject blockPrefab,
-        Color pieceColor,
-        Color clueColor)
+        Material pieceMaterial,
+        Vector3 spawnWorld)
     {
         this.game = game;
         Shape = shape;
-        isClue = isClueMask;
-        this.pieceColor = pieceColor;
-        this.clueColor = clueColor;
+        PieceMaterial = pieceMaterial;
+        this.spawnWorld = spawnWorld;
 
+        transform.position = spawnWorld;
         BuildVisual(blockPrefab);
     }
 
@@ -48,6 +40,7 @@ public sealed class PieceView : MonoBehaviour
     {
         if (!blockPrefab) return;
 
+        // bounds for centering
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
         for (int i = 0; i < Shape.Length; i++)
         {
@@ -58,6 +51,7 @@ public sealed class PieceView : MonoBehaviour
         }
         Vector2 center = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
 
+        // pivot offset so (0,0) anchor maps correctly during snap
         Vector3 local00 = new Vector3((0f - center.x) * game.CellSize, (0f - center.y) * game.CellSize, 0f);
         pivotLocalOffset = -local00;
 
@@ -74,7 +68,7 @@ public sealed class PieceView : MonoBehaviour
             if (!go.GetComponent<Collider>())
                 go.AddComponent<BoxCollider>();
 
-            ApplyColor(go, (isClue != null && isClue.Length == Shape.Length && isClue[i]) ? clueColor : pieceColor);
+            ApplyMaterial(go, PieceMaterial);
             blocks.Add(go.transform);
         }
     }
@@ -90,7 +84,6 @@ public sealed class PieceView : MonoBehaviour
             {
                 dragging = true;
                 hasAnchor = false;
-
                 game.PlayPickupSound();
             }
         }
@@ -114,10 +107,11 @@ public sealed class PieceView : MonoBehaviour
         {
             dragging = false;
 
-            if (hasAnchor && game.TryPlaceCurrentPieceAtAnchor(currentAnchor))
+            if (hasAnchor && game.TryPlacePieceAtAnchor(this, currentAnchor))
                 return;
 
-            transform.position = game.CurrentSpawnWorld;
+            // failed -> return
+            transform.position = spawnWorld;
         }
     }
 
@@ -135,19 +129,11 @@ public sealed class PieceView : MonoBehaviour
         return false;
     }
 
-    void ApplyColor(GameObject go, Color c)
+    static void ApplyMaterial(GameObject go, Material mat)
     {
+        if (!mat) return;
         var r = go.GetComponentInChildren<Renderer>();
         if (!r) return;
-
-        var mpb = new MaterialPropertyBlock();
-        r.GetPropertyBlock(mpb);
-
-        if (r.sharedMaterial && r.sharedMaterial.HasProperty(ColorId))
-            mpb.SetColor(ColorId, c);
-        else
-            mpb.SetColor(ColorIdAlt, c);
-
-        r.SetPropertyBlock(mpb);
+        r.sharedMaterial = mat;
     }
 }

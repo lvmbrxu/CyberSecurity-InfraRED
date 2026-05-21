@@ -1,8 +1,3 @@
-// TetrisGameManager.cs
-
-// NEW CHANGES
-// NO scene loading. GameOver/Win just shows UI + freezes.
-// Restart is removed; use the new SceneLoader button for restart if you want.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -26,18 +21,20 @@ public sealed class TetrisGameManager : MonoBehaviour
     public GameObject placedBlockPrefab;
     public GameObject pieceBlockPrefab;
 
-    [Header("Colors")]
-    public Color[] pieceColors;
-    public Color clueColor = Color.black;
+    [Header("Piece Materials (textures/colors)")]
+    public Material[] pieceMaterials;
 
-    [Header("Spawning")]
-    public Vector3 pieceSpawnOffset = new Vector3(0f, 3.5f, 0f);
+    [Header("Hand (3 pieces shown)")]
+    public Vector3 handSpawnOffset = new Vector3(0f, 3.5f, 0f);
+    public float handSpacingCells = 4f;
     public bool allowRotation = true;
 
-    [Header("Clues (in pieces)")]
-    public int cluesToCollect = 5;
-    [Range(0f, 1f)] public float chancePieceContainsClue = 0.45f;
-    public int maxClueBlocksPerPiece = 1;
+    [Header("Difficulty")]
+    [Range(0f, 1f)] public float solvableHandChance = 0.75f;     // base chance
+    public bool scaleDifficultyOverTime = true;                 // reduce chance as board fills
+    [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;  // at near-full board
+
+    [Header("Random Seed (0 = random)")]
     public int seed = 0;
 
     [Header("UI")]
@@ -48,29 +45,16 @@ public sealed class TetrisGameManager : MonoBehaviour
     public AudioClip pickupBlockSound;
     public AudioClip placeBlockSound;
 
-    // Public access used by PieceView
     public float CellSize => cellSize;
     public float GridZ => gridZ;
     public Camera Camera => cam;
-    public Vector3 CurrentSpawnWorld => currentSpawnWorld;
 
     bool[,] occ;
-    bool[,] clueOcc;
     GameObject[,] placedVisual;
 
-    PieceView currentPiece;
-    Vector2Int[] currentShape;
-    bool[] currentShapeIsClue;
-    Vector3 currentSpawnWorld;
-
+    readonly List<PieceView> handPieces = new();
     System.Random rng;
-    int cluesFound;
     bool ended;
-
-    Color currentPieceColor;
-
-    static readonly int ColorId = Shader.PropertyToID("_BaseColor");
-    static readonly int ColorIdAlt = Shader.PropertyToID("_Color");
 
     void Awake()
     {
@@ -81,11 +65,10 @@ public sealed class TetrisGameManager : MonoBehaviour
             audioSource = GetComponent<AudioSource>();
 
         occ = new bool[width, height];
-        clueOcc = new bool[width, height];
         placedVisual = new GameObject[width, height];
 
         BuildGridVisuals();
-        SpawnNextPieceOrGameOver();
+        DealNewHandOrGameOver();
     }
 
     public void PlayPickupSound()
@@ -140,60 +123,103 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    void SpawnNextPieceOrGameOver()
+    void DealNewHandOrGameOver()
     {
         if (ended) return;
 
-        currentShape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
-        currentShapeIsClue = BuildClueMaskForShape(currentShape);
+        for (int i = 0; i < handPieces.Count; i++)
+            if (handPieces[i]) Destroy(handPieces[i].gameObject);
+        handPieces.Clear();
+
+        float chance = solvableHandChance;
+        if (scaleDifficultyOverTime)
+        {
+            float filled01 = GetFilledRatio();
+            chance = Mathf.Lerp(solvableHandChance, minSolvableChanceLate, filled01);
+        }
+
+        bool wantSolvable = rng.NextDouble() < chance;
+
+        SolvableHandGenerator.HandPiece[] hand;
+        if (wantSolvable)
+        {
+            if (!SolvableHandGenerator.TryGenerateHand(
+                    width, height,
+                    (x, y) => occ[x, y],
+                    rng,
+                    allowRotation,
+                    out hand))
+            {
+                hand = GenerateRandomHand();
+            }
+        }
+        else
+        {
+            hand = GenerateRandomHand();
+        }
 
         Vector3 topCenter = GridToWorld(new Vector2Int(width / 2, height - 1));
-        currentSpawnWorld = topCenter + pieceSpawnOffset;
-        currentSpawnWorld.z = gridZ;
+        topCenter += handSpawnOffset;
+        topCenter.z = gridZ;
 
-        if (!AnyPlacementExists_Bounded(currentShape))
+        for (int i = 0; i < 3; i++)
         {
+            float offsetX = (i - 1) * handSpacingCells * cellSize;
+            Vector3 spawnWorld = topCenter + new Vector3(offsetX, 0f, 0f);
+
+            var root = new GameObject($"HandPiece_{i}");
+            root.transform.position = spawnWorld;
+
+            var pv = root.AddComponent<PieceView>();
+            Material mat = PickMaterial();
+            pv.Init(this, hand[i].shape, pieceBlockPrefab, mat, spawnWorld);
+            handPieces.Add(pv);
+        }
+
+        // If literally no piece placeable -> game over
+        if (!AnyHandPiecePlaceable())
             GameOver_NoSpace();
-            return;
-        }
-
-        if (currentPiece) Destroy(currentPiece.gameObject);
-
-        currentPieceColor = PickPieceColor();
-
-        var root = new GameObject("CurrentPiece");
-        root.transform.position = currentSpawnWorld;
-        root.transform.localScale = Vector3.one;
-
-        currentPiece = root.AddComponent<PieceView>();
-        currentPiece.Init(this, currentShape, currentShapeIsClue, pieceBlockPrefab, currentPieceColor, clueColor);
     }
 
-    Color PickPieceColor()
+    SolvableHandGenerator.HandPiece[] GenerateRandomHand()
     {
-        if (pieceColors == null || pieceColors.Length == 0) return Color.white;
-        return pieceColors[rng.Next(0, pieceColors.Length)];
-    }
-
-    bool[] BuildClueMaskForShape(Vector2Int[] shape)
-    {
-        var mask = new bool[shape.Length];
-        if (rng.NextDouble() > chancePieceContainsClue) return mask;
-
-        int n = Mathf.Clamp(maxClueBlocksPerPiece, 1, shape.Length);
-        int count = rng.Next(1, n + 1);
-
-        var indices = new List<int>(shape.Length);
-        for (int i = 0; i < shape.Length; i++) indices.Add(i);
-
-        for (int i = 0; i < count; i++)
+        var h = new SolvableHandGenerator.HandPiece[3];
+        for (int i = 0; i < 3; i++)
         {
-            int j = rng.Next(i, indices.Count);
-            (indices[i], indices[j]) = (indices[j], indices[i]);
-            mask[indices[i]] = true;
+            // uses your library list + rotation rules
+            var shape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
+            h[i] = new SolvableHandGenerator.HandPiece { shape = shape, rotation = 0 };
         }
+        return h;
+    }
 
-        return mask;
+    float GetFilledRatio()
+    {
+        int filled = 0;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            if (occ[x, y]) filled++;
+
+        int total = width * height;
+        return total == 0 ? 0f : (float)filled / total;
+    }
+
+    Material PickMaterial()
+    {
+        if (pieceMaterials == null || pieceMaterials.Length == 0) return null;
+        return pieceMaterials[rng.Next(0, pieceMaterials.Length)];
+    }
+
+    bool AnyHandPiecePlaceable()
+    {
+        for (int i = 0; i < handPieces.Count; i++)
+        {
+            var p = handPieces[i];
+            if (!p) continue;
+            if (AnyPlacementExists_Bounded(p.Shape))
+                return true;
+        }
+        return false;
     }
 
     bool AnyPlacementExists_Bounded(Vector2Int[] shape)
@@ -237,34 +263,38 @@ public sealed class TetrisGameManager : MonoBehaviour
         return true;
     }
 
-    public bool TryPlaceCurrentPieceAtAnchor(Vector2Int anchor)
+    public bool TryPlacePieceAtAnchor(PieceView piece, Vector2Int anchor)
     {
         if (ended) return false;
-        if (!currentPiece) return false;
+        if (!piece) return false;
 
-        if (!CanPlace(currentShape, anchor))
-            return false;
+        var shape = piece.Shape;
+        if (shape == null || shape.Length == 0) return false;
+        if (!CanPlace(shape, anchor)) return false;
 
-        CommitPlacement(currentShape, currentShapeIsClue, anchor);
-
+        CommitPlacement(shape, anchor, piece.PieceMaterial);
         PlayPlaceSound();
 
-        ClearLinesAndAwardClues();
+        ClearLines();
 
-        if (!ended && cluesFound >= cluesToCollect)
+        handPieces.Remove(piece);
+        Destroy(piece.gameObject);
+
+        if (handPieces.Count == 0)
         {
-            ended = true;
-            Debug.Log("introduce password");
-            if (ui) ui.ShowWin();
-            else Time.timeScale = 0f;
-            return true;
+            DealNewHandOrGameOver();
+        }
+        else
+        {
+            // if remaining pieces can't be placed, player loses
+            if (!AnyHandPiecePlaceable())
+                GameOver_NoSpace();
         }
 
-        SpawnNextPieceOrGameOver();
         return true;
     }
 
-    void CommitPlacement(Vector2Int[] shape, bool[] isClue, Vector2Int anchor)
+    void CommitPlacement(Vector2Int[] shape, Vector2Int anchor, Material mat)
     {
         for (int i = 0; i < shape.Length; i++)
         {
@@ -272,7 +302,6 @@ public sealed class TetrisGameManager : MonoBehaviour
             int y = anchor.y + shape[i].y;
 
             occ[x, y] = true;
-            clueOcc[x, y] = isClue[i];
 
             if (placedBlockPrefab)
             {
@@ -283,12 +312,12 @@ public sealed class TetrisGameManager : MonoBehaviour
                 go.name = $"Placed_{x}_{y}";
                 placedVisual[x, y] = go;
 
-                ApplyColor(go, isClue[i] ? clueColor : currentPieceColor);
+                ApplyMaterial(go, mat);
             }
         }
     }
 
-    void ClearLinesAndAwardClues()
+    void ClearLines()
     {
         var fullRows = new List<int>();
         var fullCols = new List<int>();
@@ -331,13 +360,6 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         if (!occ[x, y]) return;
 
-        if (clueOcc[x, y])
-        {
-            clueOcc[x, y] = false;
-            cluesFound++;
-            Debug.Log(cluesFound.ToString()); // 1..5
-        }
-
         occ[x, y] = false;
 
         if (placedVisual[x, y])
@@ -347,20 +369,12 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    void ApplyColor(GameObject go, Color c)
+    static void ApplyMaterial(GameObject go, Material mat)
     {
+        if (!mat) return;
         var r = go.GetComponentInChildren<Renderer>();
         if (!r) return;
-
-        var mpb = new MaterialPropertyBlock();
-        r.GetPropertyBlock(mpb);
-
-        if (r.sharedMaterial && r.sharedMaterial.HasProperty(ColorId))
-            mpb.SetColor(ColorId, c);
-        else
-            mpb.SetColor(ColorIdAlt, c);
-
-        r.SetPropertyBlock(mpb);
+        r.sharedMaterial = mat;
     }
 
     void GameOver_NoSpace()
@@ -370,14 +384,5 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         if (ui) ui.ShowGameOver();
         else Time.timeScale = 0f;
-    }
-
-    // Call this from your Continue button if you want gameplay to resume
-    public void ContinueGameplay()
-    {
-        ended = false;
-        Time.timeScale = 1f;
-        // If you want to keep playing after win:
-        // SpawnNextPieceOrGameOver();
     }
 }
