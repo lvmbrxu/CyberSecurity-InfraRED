@@ -4,16 +4,17 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
-
 public class ClickToMove : MonoBehaviour
 {
     private NavMeshAgent agent;
-    
+
     public float moveSpeed;
     private bool canMove = true;
 
     private NPCInteract targetNPC;
     public float interactionDistance;
+
+    public ParticleSystem walkTrail;
 
     private void Start()
     {
@@ -23,9 +24,15 @@ public class ClickToMove : MonoBehaviour
 
     void Update()
     {
-        if (!canMove) return;
+        if (!canMove)
+        {
+            HandleTrail(false);
+            return;
+        }
+
         HandleClick();
         CheckInteractionDistance();
+        HandleTrail(true);
     }
 
     void HandleClick()
@@ -33,7 +40,7 @@ public class ClickToMove : MonoBehaviour
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-            
+
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 NPCInteract npc = hit.collider.gameObject.GetComponent<NPCInteract>();
@@ -43,13 +50,16 @@ public class ClickToMove : MonoBehaviour
                     agent.SetDestination(npc.transform.position);
                     return;
                 }
-                
+
                 if (NavMesh.SamplePosition(hit.point, out NavMeshHit navMeshHit, Mathf.Infinity, 1))
                 {
                     targetNPC = null;
                     agent.SetDestination(navMeshHit.position);
                 }
-                else Debug.Log("clicked point is not a walkable area");
+                else
+                {
+                    Debug.Log("clicked point is not a walkable area");
+                }
             }
         }
     }
@@ -57,21 +67,42 @@ public class ClickToMove : MonoBehaviour
     void CheckInteractionDistance()
     {
         if (targetNPC == null) return;
+
         if (!agent.pathPending && agent.remainingDistance <= interactionDistance)
         {
             agent.isStopped = true;
             agent.ResetPath();
-            
+
             targetNPC.Interact();
             targetNPC = null;
         }
     }
+
+    void HandleTrail(bool allow)
+    {
+        if (walkTrail == null) return;
+
+        if (!allow || agent.velocity.magnitude < 0.1f)
+        {
+            if (walkTrail.isPlaying)
+                walkTrail.Stop();
+
+            return;
+        }
+
+        if (!walkTrail.isPlaying)
+            walkTrail.Play();
+    }
+
     public void StopMovement()
     {
         canMove = false;
         agent.isStopped = true;
         agent.ResetPath();
+
+        HandleTrail(false);
     }
+
     public void ResumeMovement()
     {
         canMove = true;
