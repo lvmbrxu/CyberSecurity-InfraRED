@@ -11,9 +11,6 @@ GameObject:
   - component: {fileID: 8663337714860432317}
   - component: {fileID: 5734630803381359640}
   - component: {fileID: 7525927418677158098}
-  - component: {fileID: 5210719526037621790}
-  - component: {fileID: 3378556554116268192}
-  - component: {fileID: 6105900887094569204}
   m_Layer: 0
   m_Name: PrefabPoliceRobot (1)
   m_TagString: Untagged
@@ -29,9 +26,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8318583286145237255}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -22.77, y: 0.7950843, z: -1.39}
-  m_LocalScale: {x: 0.2531515, y: 0.13789341, z: 0.096585386}
+  m_LocalScale: {x: 0.2531515, y: 0.13789341, z: 0.0965854}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -93,64 +90,3 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &5210719526037621790
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8318583286145237255}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 6.5047092, y: 19.290146, z: 4.351899}
-  m_Center: {x: 0.011583686, y: 3.8791378, z: 0}
---- !u!114 &3378556554116268192
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8318583286145237255}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b422f6c68339c448a0f724f9ca764c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NPCInteract
-  waypoints: []
-  player: {fileID: 0}
-  detectionRange: 10
-  loseRange: 3
-  returnDelay: 2
-  dialogueUI: {fileID: 0}
---- !u!195 &6105900887094569204
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8318583286145237255}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 3.2639384
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 18.55
-  m_BaseOffset: 4.52
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
