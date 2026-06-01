@@ -1,17 +1,12 @@
-// ClueCollectible.cs
+// IdCollectible.cs
+// Put on your ID prefab.
 using UnityEngine;
 
-/// <summary>
-/// Collectible clue (attach to the clue prefab root).
-/// - Trigger + kinematic Rigidbody for CharacterController reliability.
-/// - Reports to GameManager, updates UI.
-/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
-public sealed class ClueCollectible : MonoBehaviour
+public sealed class IdCollectible : MonoBehaviour
 {
     [SerializeField] private AudioSource sfx;
-
     private bool _collected;
 
     private void Awake()
@@ -33,8 +28,7 @@ public sealed class ClueCollectible : MonoBehaviour
         if (other.GetComponentInParent<DoodleJumpPlayer3D_CC>() == null) return;
 
         _collected = true;
-
-        GameManager.Instance?.OnClueCollected();
+        GameManager.Instance?.OnIdCollected();
 
         if (sfx != null)
         {

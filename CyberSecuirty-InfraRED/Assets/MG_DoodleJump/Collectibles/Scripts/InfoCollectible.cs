@@ -1,22 +1,13 @@
-// InfoCollectible.cs (Security +/- pickup, production)
+// InfoCollectible.cs (Security +/- pickups for phase 1, unchanged behavior)
+// Works with CharacterController, no tag dependency.
 using UnityEngine;
 
-/// <summary>
-/// Security pickup.
-/// - Adds/subtracts Security via GameManager.
-/// - CharacterController-safe: trigger + kinematic Rigidbody.
-/// - Player detection by component (supports child colliders).
-/// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
 public sealed class InfoCollectible : MonoBehaviour
 {
-    [Tooltip("+0.05 = +5%, -0.10 = -10%")]
     [SerializeField] private float securityDelta01 = 0.05f;
-
-    [Header("Optional")]
     [SerializeField] private AudioSource sfx;
-
     private bool _collected;
 
     private void Awake()
@@ -35,19 +26,16 @@ public sealed class InfoCollectible : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (_collected) return;
-
         if (other.GetComponentInParent<DoodleJumpPlayer3D_CC>() == null) return;
 
         _collected = true;
-
         GameManager.Instance?.AddSecurityDelta01(securityDelta01);
-
-        if (TryGetComponent<Collider>(out var c)) c.enabled = false;
-        foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
 
         if (sfx != null)
         {
             sfx.Play();
+            if (TryGetComponent<Collider>(out var c)) c.enabled = false;
+            foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;
             Destroy(gameObject, (sfx.clip != null) ? sfx.clip.length : 0f);
         }
         else

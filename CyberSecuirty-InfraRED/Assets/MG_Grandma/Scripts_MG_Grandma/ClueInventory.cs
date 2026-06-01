@@ -4,43 +4,40 @@ using UnityEngine;
 
 public sealed class SimpleClueInventory : MonoBehaviour
 {
-    private readonly Dictionary<string, string> collectedClues = new();
+    private readonly Dictionary<string, DraggableClueCard> spawnedCards = new();
 
-    [Header("UI")]
-    [SerializeField] private TMP_Text clueListText;
+    [Header("Library")]
+    [SerializeField] private Transform clueLibraryParent;
+    [SerializeField] private DraggableClueCard clueCardPrefab;
+
+    [Header("Feedback")]
     [SerializeField] private TMP_Text feedbackText;
 
     public bool HasClue(string clueId)
     {
-        return collectedClues.ContainsKey(clueId);
+        return spawnedCards.ContainsKey(clueId);
     }
 
-    public void AddClue(string clueId, string clueText)
+    public void AddClue(string clueId, string clueText, string passwordValue, PasswordClueType clueType, bool usableForPassword)
     {
         if (string.IsNullOrWhiteSpace(clueId))
             return;
 
-        if (collectedClues.ContainsKey(clueId))
+        if (spawnedCards.ContainsKey(clueId))
         {
             SetFeedback("You already found this clue");
             return;
         }
 
-        collectedClues.Add(clueId, clueText);
+        DraggableClueCard card = Instantiate(clueCardPrefab, clueLibraryParent);
+        card.Setup(clueId, clueText, passwordValue, clueType, usableForPassword);
 
-        RefreshClueList();
-        SetFeedback("Clue found: " + clueText);
-    }
+        spawnedCards.Add(clueId, card);
 
-    private void RefreshClueList()
-    {
-        if (clueListText == null)
-            return;
-
-        clueListText.text = "";
-
-        foreach (string clue in collectedClues.Values)
-            clueListText.text += "• " + clue + "\n";
+        if (usableForPassword)
+            SetFeedback("Password clue found: " + clueText);
+        else
+            SetFeedback("Info found: " + clueText);
     }
 
     private void SetFeedback(string message)

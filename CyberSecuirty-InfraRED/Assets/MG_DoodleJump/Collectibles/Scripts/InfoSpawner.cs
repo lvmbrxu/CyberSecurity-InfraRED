@@ -1,18 +1,11 @@
-// InfoSpawner.cs
+// InfoSpawner.cs (spawns Security +/- pickups in phase 1; stops when game ends)
 using UnityEngine;
 
-/// <summary>
-/// Spawns Security +/- collectibles along the climb.
-/// - Spawns ahead of player based on Y.
-/// - Caps active count.
-/// - Stops when GameManager ends.
-/// </summary>
 [DisallowMultipleComponent]
 public sealed class InfoSpawner : MonoBehaviour
 {
     public static InfoSpawner Instance { get; private set; }
 
-    [Header("Refs")]
     [SerializeField] private Transform player;
 
     [Header("Prefabs")]
@@ -39,7 +32,7 @@ public sealed class InfoSpawner : MonoBehaviour
 
     private void Start()
     {
-        if (player == null) player = Object.FindFirstObjectByType<DoodleJumpPlayer3D_CC>()?.transform;
+        if (player == null) player = FindFirstObjectByType<DoodleJumpPlayer3D_CC>()?.transform;
 
         _nextSpawnY = player != null ? player.position.y + spawnStepY : spawnStepY;
         _activeCount = 0;
@@ -53,7 +46,6 @@ public sealed class InfoSpawner : MonoBehaviour
         if (player == null) return;
 
         float py = player.position.y;
-
         while (_activeCount < maxActive && py + (spawnStepY * 3f) >= _nextSpawnY)
         {
             SpawnAt(_nextSpawnY);

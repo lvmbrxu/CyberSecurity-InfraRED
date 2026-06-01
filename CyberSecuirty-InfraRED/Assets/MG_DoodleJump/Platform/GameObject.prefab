@@ -50,15 +50,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6927171142280768100, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.51266
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6927171142280768100, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.52972746
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6927171142280768100, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.19322
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6927171142280768100, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
       propertyPath: m_LocalRotation.w
@@ -88,6 +88,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9025403875447483182, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
+      propertyPath: normalMat
+      value: 
+      objectReference: {fileID: 2100000, guid: 07064d4025997b548b0ef10b377a8ea5, type: 2}
+    - target: {fileID: 9025403875447483182, guid: afee98e04fffbfc4ba5438faf6398686, type: 3}
+      propertyPath: phase2Mat
+      value: 
+      objectReference: {fileID: 2100000, guid: 38a1599f768562c46b0552bbbb791077, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

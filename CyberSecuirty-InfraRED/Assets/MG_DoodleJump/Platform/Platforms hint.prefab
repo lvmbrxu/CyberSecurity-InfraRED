@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 456164173435796482}
   - component: {fileID: 527109923933204907}
   - component: {fileID: 9025403875447483182}
+  - component: {fileID: 5434049844402886959}
   m_Layer: 3
   m_Name: Platforms hint
   m_TagString: Untagged
@@ -127,3 +128,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Platform3D
   breaks: 0
   breakDelay: 0.05
+  renderers: []
+  normalMat: {fileID: 0}
+  phase2Mat: {fileID: 0}
+--- !u!114 &5434049844402886959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3885733570951544737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 959507b5222c8714eb6f9d2fd85fc3ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IdCollectible
+  sfx: {fileID: 0}

@@ -1,39 +1,53 @@
-// GameManager.cs (add clue tracking + UI hooks)
+// GameManager.cs
+// Single-source game flow (NO namespaces).
+// Fixes your compile errors by DEFINING:
+// - GamePhase enum
+// - Phase property
+// - HasEnded property
+// - OnIdCollected() (and OnClueCollected() alias for any leftover scripts)
+// Also implements the 2-phase flow you asked for:
+// Phase 1: Security climbs to 100% via maxY progress (jumping).
+// Phase 2: Fade swap -> background changes, security UI hides, ID UI shows,
+//          spawner enters Phase2 (platform visuals swap + IDs spawn) until 3 collected -> end.
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
-
-/// <summary>
-/// Security-driven loop.
-/// - Security (0..1) increases with maxY progress + pickups.
-/// - Falling applies penalty ONCE per fall, then respawns if Security > 0.
-/// - Death only at 0, Win at 1.
-/// </summary>
 
 [DisallowMultipleComponent]
 public sealed class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    public enum GamePhase { Phase1_SecurityRun, Phase2_IdHunt, Ended }
+
     [Header("Refs")]
     [SerializeField] private DoodleJumpPlayer3D_CC player;
     [SerializeField] private FollowCameraY followCam;
+    [SerializeField] private PlatformSpawner platformSpawner;
+    [SerializeField] private PhaseTransition transition;
+    [SerializeField] private Camera mainCamera;
 
-    [Header("UI - Security")]
-    [SerializeField] private Slider securitySlider;
+    [Header("UI - Phase 1 (Security)")]
+    [SerializeField] private CanvasGroup securityUi;
+    [SerializeField] private Slider securitySlider; // 0..1
     [SerializeField] private TMP_Text securityPercentText;
 
-    [Header("UI - Clues")]
-    [Tooltip("Example: 'Clues: 0/3'")]
-    [SerializeField] private TMP_Text clueCountText;
+    [Header("UI - Phase 2 (IDs)")]
+    [SerializeField] private CanvasGroup idUi;
+    [SerializeField] private TMP_Text idCountText; // "IDs: 0/3"
 
     [Header("Panels")]
     [SerializeField] private GameObject deathPanel;
     [SerializeField] private GameObject winPanel;
 
-    [Header("Security")]
-    [SerializeField, Range(0f, 1f)] private float startSecurity01 = 0.25f;
+    [Header("Background Swap")]
+    [SerializeField] private Color phase1Background = Color.black;
+    [SerializeField] private Color phase2Background = new Color(0.08f, 0.08f, 0.08f);
+
+    [Header("Security (Phase 1)")]
+    [SerializeField, Range(0f, 1f)] private float startSecurity01 = 0.10f;
     [SerializeField, Range(0.01f, 1f)] private float fallPenalty01 = 0.10f;
     [SerializeField, Min(1f)] private float unitsToFullSecurity = 900f;
 
@@ -41,22 +55,23 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField, Min(0f)] private float fallBelowScreen = 2.5f;
     [SerializeField, Min(0f)] private float fallUnlockMargin = 1.5f;
 
-    [Header("Clues")]
-    [Tooltip("Total clues possible in the run (matches max special platforms).")]
-    [SerializeField, Min(0)] private int totalClues = 3;
+    [Header("IDs (Phase 2)")]
+    [SerializeField, Min(1)] private int idsRequired = 3;
 
-    private float _security01;
-    private float _runStartY;
-    private float _maxY;
-    private bool _ended;
-    private bool _fallLock;
+    // ---- Runtime state ----
+    public GamePhase Phase { get; private set; } = GamePhase.Phase1_SecurityRun;
+    public bool HasEnded => Phase == GamePhase.Ended;
 
-    private int _cluesCollected;
+    public float Security01 => security01;
+    public int IdsCollected => idsCollected;
+    public int IdsRequired => idsRequired;
 
-    public bool HasEnded => _ended;
-    public float Security01 => _security01;
-    public int CluesCollected => _cluesCollected;
-    public int TotalClues => totalClues;
+    private float security01;
+    private float runStartY;
+    private float maxY;
+    private bool fallLock;
+
+    private int idsCollected;
 
     private void Awake()
     {
@@ -69,62 +84,89 @@ public sealed class GameManager : MonoBehaviour
     {
         if (player == null) player = FindFirstObjectByType<DoodleJumpPlayer3D_CC>();
         if (followCam == null) followCam = Camera.main != null ? Camera.main.GetComponent<FollowCameraY>() : null;
+        if (platformSpawner == null) platformSpawner = FindFirstObjectByType<PlatformSpawner>();
+        if (mainCamera == null) mainCamera = Camera.main;
 
         if (deathPanel) deathPanel.SetActive(false);
         if (winPanel) winPanel.SetActive(false);
 
-        _runStartY = player != null ? player.transform.position.y : 0f;
-        _maxY = _runStartY;
-        _fallLock = false;
+        runStartY = player != null ? player.transform.position.y : 0f;
+        maxY = runStartY;
+        fallLock = false;
 
-        _cluesCollected = 0;
-        UpdateClueUI();
+        idsCollected = 0;
 
+        ApplyPresentationForPhase(GamePhase.Phase1_SecurityRun);
         SetSecurity(startSecurity01, force: true);
+        UpdateIdUI(); // keeps UI consistent if you toggle panels in editor
     }
 
     private void Update()
     {
-        if (_ended) return;
+        if (HasEnded) return;
         if (player == null || followCam == null) return;
 
         float y = player.transform.position.y;
 
-        // Distance-based security uses maxY only.
-        if (y > _maxY)
-        {
-            _maxY = y;
-            float dist01 = Mathf.Clamp01((_maxY - _runStartY) / unitsToFullSecurity);
-            if (dist01 > _security01) SetSecurity(dist01);
-        }
+        HandleFall(y);
 
-        // Debounced fall.
+        if (Phase == GamePhase.Phase1_SecurityRun)
+        {
+            // Security progresses ONLY by upward maxY (jumping/climbing).
+            if (y > maxY)
+            {
+                maxY = y;
+                float dist01 = Mathf.Clamp01((maxY - runStartY) / unitsToFullSecurity);
+                if (dist01 > security01) SetSecurity(dist01);
+            }
+
+            if (security01 >= 1f)
+                BeginPhase2();
+        }
+    }
+
+    // ---------------- Security ----------------
+
+    public void AddSecurityDelta01(float delta01)
+    {
+        if (HasEnded) return;
+        SetSecurity(security01 + delta01);
+    }
+
+    private void SetSecurity(float value01, bool force = false)
+    {
+        float v = Mathf.Clamp01(value01);
+        if (!force && Mathf.Approximately(v, security01)) return;
+
+        security01 = v;
+
+        if (securitySlider) securitySlider.value = security01;
+        if (securityPercentText) securityPercentText.text = Mathf.RoundToInt(security01 * 100f) + "%";
+    }
+
+    // ---------------- Fall handling (both phases; security is "life") ----------------
+
+    private void HandleFall(float playerY)
+    {
         float fallLine = followCam.BottomY - fallBelowScreen;
 
-        if (_fallLock && y > (fallLine + fallUnlockMargin))
-            _fallLock = false;
+        // unlock once safely above fall line again
+        if (fallLock && playerY > (fallLine + fallUnlockMargin))
+            fallLock = false;
 
-        if (!_fallLock && y < fallLine)
+        // process fall ONCE
+        if (!fallLock && playerY < fallLine)
         {
-            _fallLock = true;
+            fallLock = true;
             ApplyFallPenaltyAndRecover();
         }
     }
 
-    // --- Security API ---
-    public void AddSecurityDelta01(float delta01)
-    {
-        if (_ended) return;
-        SetSecurity(_security01 + delta01);
-    }
-
     private void ApplyFallPenaltyAndRecover()
     {
-        if (_ended) return;
+        SetSecurity(security01 - fallPenalty01);
 
-        SetSecurity(_security01 - fallPenalty01);
-
-        if (_security01 <= 0f)
+        if (security01 <= 0f)
         {
             Die();
             return;
@@ -133,56 +175,101 @@ public sealed class GameManager : MonoBehaviour
         player.RecoverFromFall();
     }
 
-    private void SetSecurity(float value01, bool force = false)
+    // ---------------- Phase 2 ----------------
+
+    private void BeginPhase2()
     {
-        float v = Mathf.Clamp01(value01);
-        if (!force && Mathf.Approximately(v, _security01)) return;
+        if (Phase != GamePhase.Phase1_SecurityRun) return;
+        if (transition != null && transition.IsBusy) return;
 
-        _security01 = v;
+        System.Action swap = () =>
+        {
+            Phase = GamePhase.Phase2_IdHunt;
+            ApplyPresentationForPhase(GamePhase.Phase2_IdHunt);
 
-        if (securitySlider) securitySlider.value = _security01;
-        if (securityPercentText) securityPercentText.text = Mathf.RoundToInt(_security01 * 100f) + "%";
+            // Reset ID hunt.
+            idsCollected = 0;
+            UpdateIdUI();
 
-        if (_security01 >= 1f) Win();
+            // Tell spawner to swap visuals + start ID spawning.
+            // (Your PlatformSpawner must implement EnterPhase2(int idsRequired).)
+            if (platformSpawner != null)
+                platformSpawner.EnterPhase2(idsRequired);
+        };
+
+        if (transition != null)
+            StartCoroutine(transition.FadeSwap(swap));
+        else
+            swap.Invoke();
     }
 
-    // --- Clue API ---
-    public void OnClueCollected()
+    // Called by IdCollectible
+    public void OnIdCollected()
     {
-        if (_ended) return;
+        if (HasEnded) return;
+        if (Phase != GamePhase.Phase2_IdHunt) return;
 
-        _cluesCollected = Mathf.Clamp(_cluesCollected + 1, 0, totalClues);
-        UpdateClueUI();
+        idsCollected = Mathf.Clamp(idsCollected + 1, 0, idsRequired);
+        UpdateIdUI();
+
+        if (idsCollected >= idsRequired)
+            Win();
     }
 
-    private void UpdateClueUI()
+    // Alias for any old scripts still calling clue API (keeps compile clean).
+    public void OnClueCollected() => OnIdCollected();
+
+    private void UpdateIdUI()
     {
-        if (clueCountText != null)
-            clueCountText.text = $"Clues: {_cluesCollected}/{totalClues}";
+        if (idCountText != null)
+            idCountText.text = $"IDs: {idsCollected}/{idsRequired}";
     }
 
-    // --- Flow ---
+    // ---------------- Presentation ----------------
+
+    private void ApplyPresentationForPhase(GamePhase phase)
+    {
+        SetCanvasGroup(securityUi, phase == GamePhase.Phase1_SecurityRun);
+        SetCanvasGroup(idUi, phase == GamePhase.Phase2_IdHunt);
+
+        if (mainCamera != null)
+        {
+            // Recommended: mainCamera.clearFlags = SolidColor
+            mainCamera.backgroundColor = (phase == GamePhase.Phase2_IdHunt) ? phase2Background : phase1Background;
+        }
+    }
+
+    private static void SetCanvasGroup(CanvasGroup cg, bool on)
+    {
+        if (cg == null) return;
+        cg.alpha = on ? 1f : 0f;
+        cg.interactable = on;
+        cg.blocksRaycasts = on;
+    }
+
+    // ---------------- End states ----------------
+
     public void Die()
     {
-        if (_ended) return;
-        _ended = true;
+        if (HasEnded) return;
+        Phase = GamePhase.Ended;
 
         Time.timeScale = 0f;
         if (deathPanel) deathPanel.SetActive(true);
 
-        PlatformSpawner.Instance?.StopSpawning();
+        platformSpawner?.StopSpawning();
         InfoSpawner.Instance?.StopSpawning();
     }
 
     public void Win()
     {
-        if (_ended) return;
-        _ended = true;
+        if (HasEnded) return;
+        Phase = GamePhase.Ended;
 
         Time.timeScale = 0f;
         if (winPanel) winPanel.SetActive(true);
 
-        PlatformSpawner.Instance?.StopSpawning();
+        platformSpawner?.StopSpawning();
         InfoSpawner.Instance?.StopSpawning();
     }
 

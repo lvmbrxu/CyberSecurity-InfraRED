@@ -7,55 +7,54 @@ public sealed class SimpleClueClickZone : MonoBehaviour, IPointerEnterHandler, I
     [Header("Clue")]
     [SerializeField] private string clueId;
     [SerializeField] private string clueText;
+    [SerializeField] private string passwordValue;
+    [SerializeField] private PasswordClueType clueType;
+    [SerializeField] private bool usableForPassword = true;
 
     [Header("References")]
     [SerializeField] private SimpleClueInventory clueInventory;
-    [SerializeField] private Image hoverImage;
+    [SerializeField] private Image highlightImage;
 
-    [Header("Hover")]
-    [SerializeField] private float hoverAlpha = 0.18f;
+    [Header("Highlight")]
+    [SerializeField] private float hoverAlpha = 0.22f;
+    [SerializeField] private float foundAlpha = 0.12f;
 
     private bool collected;
 
     private void Awake()
     {
-        SetHover(false);
+        SetHighlight(0f);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (!collected)
-            SetHover(true);
+            SetHighlight(hoverAlpha);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        SetHover(false);
+        SetHighlight(collected ? foundAlpha : 0f);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        Collect();
-    }
-
-    private void Collect()
-    {
         if (collected || clueInventory == null)
             return;
 
-        clueInventory.AddClue(clueId, clueText);
-        collected = true;
+        clueInventory.AddClue(clueId, clueText, passwordValue, clueType, usableForPassword);
 
-        SetHover(false);
+        collected = true;
+        SetHighlight(foundAlpha);
     }
 
-    private void SetHover(bool visible)
+    private void SetHighlight(float alpha)
     {
-        if (hoverImage == null)
+        if (highlightImage == null)
             return;
 
-        Color color = hoverImage.color;
-        color.a = visible ? hoverAlpha : 0f;
-        hoverImage.color = color;
+        Color color = highlightImage.color;
+        color.a = alpha;
+        highlightImage.color = color;
     }
 }
