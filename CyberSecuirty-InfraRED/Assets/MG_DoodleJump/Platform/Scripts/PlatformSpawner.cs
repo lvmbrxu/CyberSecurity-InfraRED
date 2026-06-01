@@ -1,8 +1,4 @@
 // PlatformSpawner.cs
-// - Spawns platforms naturally throughout the whole run.
-// - At Phase2: swaps ALL platforms (existing + future) to Phase2Special visuals.
-// - Spawns ID pickups on main platforms randomly until required count is spawned.
-// - IDs are placed above platform collider top (safe offset), with min vertical separation.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,7 +11,7 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField] private DoodleJumpPlayer3D_CC player;
     [SerializeField] private CharacterController playerController;
 
-    [Header("Platform Prefab (single)")]
+    [Header("Platform Prefab")]
     [SerializeField] private GameObject platformPrefab;
 
     [Header("Width (defaults to player XLimit)")]
@@ -51,7 +47,7 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField, Min(0f)] private float laneMinXSpacing = 3.4f;
     [SerializeField, Min(0f)] private float laneOffsetY = 0.8f;
 
-    [Header("Phase 2 IDs")]
+    [Header("IDs (Phase 2)")]
     [SerializeField] private GameObject idPrefab;
     [SerializeField, Range(0f, 1f)] private float idChancePerMainPlatform = 0.10f;
     [SerializeField, Min(0f)] private float minIdSeparationY = 16f;
@@ -65,28 +61,29 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField, Min(0f)] private float startYOffset = 1.2f;
     [SerializeField, Min(0f)] private float startXJitter = 0.8f;
 
-    private bool _stopped;
+    private bool stopped;
 
-    private float _maxY;
-    private float _nextY;
-    private float _lastX;
-    private float _noiseSeed;
+    private float maxY;
+    private float nextY;
+    private float lastX;
+    private float noiseSeed;
 
-    private float _xLimit;
-    private float MinX => -_xLimit;
-    private float MaxX => _xLimit;
+    private float xLimit;
+    private float MinX => -xLimit;
+    private float MaxX => xLimit;
 
-    private readonly Queue<Transform> _alive = new();
-    private readonly List<Vector2> _recent = new(96);
-    private int _recentMax = 72;
+    private readonly Queue<Transform> alive = new();
+    private readonly List<Vector2> recent = new(96);
+    private int recentMax = 72;
 
-    private Quaternion _rot;
+    private Quaternion rot;
 
-    // Phase2
-    private bool _phase2;
-    private int _idsToSpawn;
-    private int _idsSpawned;
-    private float _lastIdY = float.NegativeInfinity;
+    private bool phase2VisualsOnly;
+    private bool phase2;
+
+    private int idsToSpawn;
+    private int idsSpawned;
+    private float lastIdY = float.NegativeInfinity;
 
     private void Awake()
     {
@@ -100,7 +97,7 @@ public sealed class PlatformSpawner : MonoBehaviour
         if (player != null && playerController == null) playerController = player.GetComponent<CharacterController>();
         if (player == null || platformPrefab == null) return;
 
-        _xLimit = (overrideXLimit > 0f) ? overrideXLimit : player.XLimit;
+        xLimit = (overrideXLimit > 0f) ? overrideXLimit : player.XLimit;
 
         if (laneMinXSpacing < minSpacingX) laneMinXSpacing = minSpacingX;
 
@@ -114,74 +111,92 @@ public sealed class PlatformSpawner : MonoBehaviour
         if (avgGapY < minSpacingY) avgGapY = minSpacingY;
         gapJitterY = Mathf.Clamp(gapJitterY, 0f, avgGapY * 0.5f);
 
-        _rot = Quaternion.Euler(platformEuler);
-        _noiseSeed = Random.value * 1000f;
+        rot = Quaternion.Euler(platformEuler);
+        noiseSeed = Random.value * 1000f;
 
-        _maxY = player.transform.position.y;
-        _lastX = Mathf.Clamp(player.transform.position.x, MinX, MaxX);
+        maxY = player.transform.position.y;
+        lastX = Mathf.Clamp(player.transform.position.x, MinX, MaxX);
 
-        _phase2 = false;
-        _idsToSpawn = 0;
-        _idsSpawned = 0;
-        _lastIdY = float.NegativeInfinity;
+        phase2 = false;
+        phase2VisualsOnly = false;
+
+        idsToSpawn = 0;
+        idsSpawned = 0;
 
         if (spawnStartPlatform)
         {
-            float sx = Mathf.Clamp(_lastX + Random.Range(-startXJitter, startXJitter), MinX, MaxX);
-            float sy = _maxY + startYOffset;
+            float sx = Mathf.Clamp(lastX + Random.Range(-startXJitter, startXJitter), MinX, MaxX);
+            float sy = maxY + startYOffset;
             SpawnPlatform(sx, sy, force: true, isMain: true);
         }
 
-        _nextY = _maxY + Mathf.Max(minSpacingY, startYOffset + 1.2f);
-        FillTo(_maxY + spawnAhead);
+        nextY = maxY + Mathf.Max(minSpacingY, startYOffset + 1.2f);
+        FillTo(maxY + spawnAhead);
     }
 
     private void Update()
     {
-        if (_stopped) return;
+        if (stopped) return;
         if (GameManager.Instance != null && GameManager.Instance.HasEnded) return;
 
         float py = player.transform.position.y;
-        if (py > _maxY) _maxY = py;
+        if (py > maxY) maxY = py;
 
-        float targetTop = _maxY + spawnAhead;
+        float targetTop = maxY + spawnAhead;
 
         int steps = 0;
-        while (_nextY < targetTop && steps < maxStepsPerFrame)
+        while (nextY < targetTop && steps < maxStepsPerFrame)
         {
-            SpawnBeat(_nextY);
-            _nextY += NextGapY();
+            SpawnBeat(nextY);
+            nextY += NextGapY();
             steps++;
         }
 
         Cleanup();
     }
 
-    public void StopSpawning() => _stopped = true;
+    public void StopSpawning() => stopped = true;
+
+    public void PreviewPhase2Visuals()
+    {
+        phase2VisualsOnly = true;
+        SwapAllPlatformsToPhase2Global();
+    }
 
     public void EnterPhase2(int idsRequired)
     {
-        _phase2 = true;
-        _idsToSpawn = Mathf.Max(0, idsRequired);
-        _idsSpawned = 0;
-        _lastIdY = float.NegativeInfinity;
+        phase2 = true;
+        phase2VisualsOnly = true;
 
-        // Swap existing platforms to phase2 visuals.
-        foreach (var t in _alive)
-        {
-            if (t == null) continue;
-            var p = t.GetComponent<Platform3D>();
-            if (p != null) p.SetVariant(Platform3D.VisualVariant.Phase2Special);
-        }
+        idsToSpawn = Mathf.Max(0, idsRequired);
+        idsSpawned = 0;
+        lastIdY = float.NegativeInfinity;
+
+        SwapAllPlatformsToPhase2Global();
+    }
+
+    /// <summary>
+    /// Guaranteed swap: affects ALL Platform3D in the scene (not just tracked queue).
+    /// Call this at transition moment.
+    /// </summary>
+    public void SwapAllPlatformsToPhase2Global()
+    {
+#if UNITY_2022_2_OR_NEWER
+        var platforms = FindObjectsByType<Platform3D>(FindObjectsSortMode.None);
+#else
+        var platforms = FindObjectsOfType<Platform3D>();
+#endif
+        for (int i = 0; i < platforms.Length; i++)
+            platforms[i].SetVariant(Platform3D.VisualVariant.Phase2Special);
     }
 
     private void FillTo(float topY)
     {
         int guard = 8000;
-        while (_nextY < topY && guard-- > 0)
+        while (nextY < topY && guard-- > 0)
         {
-            SpawnBeat(_nextY);
-            _nextY += NextGapY();
+            SpawnBeat(nextY);
+            nextY += NextGapY();
         }
     }
 
@@ -197,7 +212,7 @@ public sealed class PlatformSpawner : MonoBehaviour
             return;
 
         SpawnPlatform(mainX, y, force: false, isMain: true);
-        _lastX = mainX;
+        lastX = mainX;
 
         float lastPlacedX = mainX;
         for (int i = 0; i < extraPlatformsPerBeat; i++)
@@ -215,22 +230,23 @@ public sealed class PlatformSpawner : MonoBehaviour
     {
         if (!force && !IsValid(x, y)) return;
 
-        Transform platform = Instantiate(platformPrefab, new Vector3(x, y, fixedZ), _rot).transform;
+        Transform platform = Instantiate(platformPrefab, new Vector3(x, y, fixedZ), rot).transform;
 
-        if (_phase2)
+        if (phase2VisualsOnly || phase2)
         {
             var plat = platform.GetComponent<Platform3D>();
             if (plat != null) plat.SetVariant(Platform3D.VisualVariant.Phase2Special);
-
-            TrySpawnIdOnPlatform(platform, y, isMain);
         }
 
-        _alive.Enqueue(platform);
+        if (phase2)
+            TrySpawnIdOnPlatform(platform, y, isMain);
+
+        alive.Enqueue(platform);
         Remember(x, y);
 
-        while (_alive.Count > maxAlive)
+        while (alive.Count > maxAlive)
         {
-            Transform old = _alive.Dequeue();
+            Transform old = alive.Dequeue();
             if (old != null) Destroy(old.gameObject);
         }
     }
@@ -239,28 +255,19 @@ public sealed class PlatformSpawner : MonoBehaviour
     {
         if (!isMain) return;
         if (idPrefab == null) return;
-        if (_idsSpawned >= _idsToSpawn) return;
-
-        if (platformY < _lastIdY + minIdSeparationY) return;
-
+        if (idsSpawned >= idsToSpawn) return;
+        if (platformY < lastIdY + minIdSeparationY) return;
         if (Random.value > idChancePerMainPlatform) return;
 
-        Vector3 worldPos;
         var col = platformRoot.GetComponentInChildren<Collider>();
-        if (col != null)
-        {
-            Bounds b = col.bounds;
-            worldPos = new Vector3(b.center.x, b.max.y + idWorldYOffset, b.center.z);
-        }
-        else
-        {
-            worldPos = platformRoot.position + Vector3.up * idWorldYOffset;
-        }
+        Vector3 worldPos = (col != null)
+            ? new Vector3(col.bounds.center.x, col.bounds.max.y + idWorldYOffset, col.bounds.center.z)
+            : platformRoot.position + Vector3.up * idWorldYOffset;
 
         Instantiate(idPrefab, worldPos, Quaternion.identity, platformRoot);
 
-        _idsSpawned++;
-        _lastIdY = platformY;
+        idsSpawned++;
+        lastIdY = platformY;
     }
 
     private bool TryFindValidX(float y, out float x)
@@ -293,7 +300,6 @@ public sealed class PlatformSpawner : MonoBehaviour
         for (int i = 0; i < laneAttempts; i++)
         {
             float candidate = Random.Range(MinX, MaxX);
-
             if (Mathf.Abs(candidate - mainX) < laneMinXSpacing) continue;
             if (Mathf.Abs(candidate - lastLaneX) < laneMinXSpacing) continue;
 
@@ -310,22 +316,20 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private float SampleMainX(float y)
     {
-        float n = Mathf.PerlinNoise(_noiseSeed, y * driftScale);
+        float n = Mathf.PerlinNoise(noiseSeed, y * driftScale);
         float drift = Mathf.Lerp(MinX, MaxX, n);
         float uniform = Random.Range(MinX, MaxX);
 
         float desired = Mathf.Lerp(uniform, drift, driftBias);
-
-        float delta = Mathf.Clamp(desired - _lastX, -maxStepX, maxStepX);
-        return Mathf.Clamp(_lastX + delta, MinX, MaxX);
+        float delta = Mathf.Clamp(desired - lastX, -maxStepX, maxStepX);
+        return Mathf.Clamp(lastX + delta, MinX, MaxX);
     }
 
     private bool IsValid(float x, float y)
     {
-        for (int i = 0; i < _recent.Count; i++)
+        for (int i = 0; i < recent.Count; i++)
         {
-            Vector2 p = _recent[i];
-
+            Vector2 p = recent[i];
             float dy = Mathf.Abs(y - p.y);
             if (dy > minSpacingY) continue;
 
@@ -337,22 +341,22 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private void Remember(float x, float y)
     {
-        _recent.Add(new Vector2(x, y));
-        if (_recent.Count > _recentMax)
-            _recent.RemoveRange(0, _recent.Count - _recentMax);
+        recent.Add(new Vector2(x, y));
+        if (recent.Count > recentMax)
+            recent.RemoveRange(0, recent.Count - recentMax);
     }
 
     private void Cleanup()
     {
-        float killY = _maxY - despawnBelowMaxY;
+        float killY = maxY - despawnBelowMaxY;
 
-        while (_alive.Count > 0)
+        while (alive.Count > 0)
         {
-            Transform t = _alive.Peek();
-            if (t == null) { _alive.Dequeue(); continue; }
+            Transform t = alive.Peek();
+            if (t == null) { alive.Dequeue(); continue; }
             if (t.position.y >= killY) break;
 
-            _alive.Dequeue();
+            alive.Dequeue();
             Destroy(t.gameObject);
         }
     }

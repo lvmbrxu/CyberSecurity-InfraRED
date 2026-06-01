@@ -1,15 +1,8 @@
-// GameManager.cs
-// Single-source game flow (NO namespaces).
-// Fixes your compile errors by DEFINING:
-// - GamePhase enum
-// - Phase property
-// - HasEnded property
-// - OnIdCollected() (and OnClueCollected() alias for any leftover scripts)
-// Also implements the 2-phase flow you asked for:
-// Phase 1: Security climbs to 100% via maxY progress (jumping).
-// Phase 2: Fade swap -> background changes, security UI hides, ID UI shows,
-//          spawner enters Phase2 (platform visuals swap + IDs spawn) until 3 collected -> end.
-
+// GameManager.cs (updated)
+// Changes vs previous:
+// - Adds CameraBackgroundSwap reference
+// - During the fade blackout, swaps background MATERIAL (SetPhase2)
+// - Also forces platform material swap globally at that moment, then enables Phase2 ID spawning
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -27,7 +20,9 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private FollowCameraY followCam;
     [SerializeField] private PlatformSpawner platformSpawner;
     [SerializeField] private PhaseTransition transition;
-    [SerializeField] private Camera mainCamera;
+
+    [Header("Camera Background (Quad child of camera)")]
+    [SerializeField] private CameraBackgroundSwap cameraBackgroundSwap;
 
     [Header("UI - Phase 1 (Security)")]
     [SerializeField] private CanvasGroup securityUi;
@@ -42,14 +37,14 @@ public sealed class GameManager : MonoBehaviour
     [SerializeField] private GameObject deathPanel;
     [SerializeField] private GameObject winPanel;
 
-    [Header("Background Swap")]
-    [SerializeField] private Color phase1Background = Color.black;
-    [SerializeField] private Color phase2Background = new Color(0.08f, 0.08f, 0.08f);
-
     [Header("Security (Phase 1)")]
     [SerializeField, Range(0f, 1f)] private float startSecurity01 = 0.10f;
     [SerializeField, Range(0.01f, 1f)] private float fallPenalty01 = 0.10f;
     [SerializeField, Min(1f)] private float unitsToFullSecurity = 900f;
+
+    [Header("Early Platform Visual Swap")]
+    [Tooltip("Switch platform material early (visual only). Phase 2 gameplay still starts at 100%.")]
+    [SerializeField, Range(0f, 1f)] private float phase2VisualsAtSecurity01 = 0.85f;
 
     [Header("Fall Rules")]
     [SerializeField, Min(0f)] private float fallBelowScreen = 2.5f;
@@ -58,7 +53,6 @@ public sealed class GameManager : MonoBehaviour
     [Header("IDs (Phase 2)")]
     [SerializeField, Min(1)] private int idsRequired = 3;
 
-    // ---- Runtime state ----
     public GamePhase Phase { get; private set; } = GamePhase.Phase1_SecurityRun;
     public bool HasEnded => Phase == GamePhase.Ended;
 
@@ -72,6 +66,7 @@ public sealed class GameManager : MonoBehaviour
     private bool fallLock;
 
     private int idsCollected;
+    private bool phase2VisualsTriggered;
 
     private void Awake()
     {
@@ -85,7 +80,6 @@ public sealed class GameManager : MonoBehaviour
         if (player == null) player = FindFirstObjectByType<DoodleJumpPlayer3D_CC>();
         if (followCam == null) followCam = Camera.main != null ? Camera.main.GetComponent<FollowCameraY>() : null;
         if (platformSpawner == null) platformSpawner = FindFirstObjectByType<PlatformSpawner>();
-        if (mainCamera == null) mainCamera = Camera.main;
 
         if (deathPanel) deathPanel.SetActive(false);
         if (winPanel) winPanel.SetActive(false);
@@ -95,10 +89,13 @@ public sealed class GameManager : MonoBehaviour
         fallLock = false;
 
         idsCollected = 0;
+        phase2VisualsTriggered = false;
 
         ApplyPresentationForPhase(GamePhase.Phase1_SecurityRun);
+        cameraBackgroundSwap?.SetPhase1();
+
         SetSecurity(startSecurity01, force: true);
-        UpdateIdUI(); // keeps UI consistent if you toggle panels in editor
+        UpdateIdUI();
     }
 
     private void Update()
@@ -112,7 +109,7 @@ public sealed class GameManager : MonoBehaviour
 
         if (Phase == GamePhase.Phase1_SecurityRun)
         {
-            // Security progresses ONLY by upward maxY (jumping/climbing).
+            // Security progresses ONLY by upward maxY.
             if (y > maxY)
             {
                 maxY = y;
@@ -120,6 +117,14 @@ public sealed class GameManager : MonoBehaviour
                 if (dist01 > security01) SetSecurity(dist01);
             }
 
+            // Early visual-only swap for platforms.
+            if (!phase2VisualsTriggered && security01 >= phase2VisualsAtSecurity01)
+            {
+                phase2VisualsTriggered = true;
+                platformSpawner?.PreviewPhase2Visuals();
+            }
+
+            // Actual phase switch at 100%.
             if (security01 >= 1f)
                 BeginPhase2();
         }
@@ -144,17 +149,15 @@ public sealed class GameManager : MonoBehaviour
         if (securityPercentText) securityPercentText.text = Mathf.RoundToInt(security01 * 100f) + "%";
     }
 
-    // ---------------- Fall handling (both phases; security is "life") ----------------
+    // ---------------- Fall handling (both phases; security is still "life") ----------------
 
     private void HandleFall(float playerY)
     {
         float fallLine = followCam.BottomY - fallBelowScreen;
 
-        // unlock once safely above fall line again
         if (fallLock && playerY > (fallLine + fallUnlockMargin))
             fallLock = false;
 
-        // process fall ONCE
         if (!fallLock && playerY < fallLine)
         {
             fallLock = true;
@@ -184,17 +187,19 @@ public sealed class GameManager : MonoBehaviour
 
         System.Action swap = () =>
         {
+            // PHASE 2 PRESENTATION: swap background material + UI during blackout.
             Phase = GamePhase.Phase2_IdHunt;
             ApplyPresentationForPhase(GamePhase.Phase2_IdHunt);
 
-            // Reset ID hunt.
+            cameraBackgroundSwap?.SetPhase2();
+
+            // FORCE platform material swap instantly for ALL platforms, then enable ID spawns.
+            platformSpawner?.SwapAllPlatformsToPhase2Global();
+            platformSpawner?.EnterPhase2(idsRequired);
+
+            // Reset ID counter and show UI.
             idsCollected = 0;
             UpdateIdUI();
-
-            // Tell spawner to swap visuals + start ID spawning.
-            // (Your PlatformSpawner must implement EnterPhase2(int idsRequired).)
-            if (platformSpawner != null)
-                platformSpawner.EnterPhase2(idsRequired);
         };
 
         if (transition != null)
@@ -216,7 +221,7 @@ public sealed class GameManager : MonoBehaviour
             Win();
     }
 
-    // Alias for any old scripts still calling clue API (keeps compile clean).
+    // Alias for any old scripts still calling clue API.
     public void OnClueCollected() => OnIdCollected();
 
     private void UpdateIdUI()
@@ -231,12 +236,6 @@ public sealed class GameManager : MonoBehaviour
     {
         SetCanvasGroup(securityUi, phase == GamePhase.Phase1_SecurityRun);
         SetCanvasGroup(idUi, phase == GamePhase.Phase2_IdHunt);
-
-        if (mainCamera != null)
-        {
-            // Recommended: mainCamera.clearFlags = SolidColor
-            mainCamera.backgroundColor = (phase == GamePhase.Phase2_IdHunt) ? phase2Background : phase1Background;
-        }
     }
 
     private static void SetCanvasGroup(CanvasGroup cg, bool on)

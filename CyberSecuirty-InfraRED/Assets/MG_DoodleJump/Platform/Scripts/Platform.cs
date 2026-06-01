@@ -1,8 +1,4 @@
 // Platform3D.cs
-// Platform behavior + visual swap for phase 2.
-// - Calls OnPlayerBounced() from PlayerController (breakables).
-// - Swaps to Phase2 material when GameManager is in Phase2.
-// - Uses sharedMaterial (no instancing).
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
@@ -22,9 +18,6 @@ public sealed class Platform3D : MonoBehaviour
     [SerializeField] private Material normalMat;
     [SerializeField] private Material phase2Mat;
 
-    [Header("Debug")]
-    [SerializeField] private bool logMissingMaterials = false;
-
     private bool _used;
     private VisualVariant _current = (VisualVariant)(-1);
 
@@ -41,22 +34,6 @@ public sealed class Platform3D : MonoBehaviour
         }
 
         GetComponent<Collider>().isTrigger = false;
-
-        if (logMissingMaterials)
-        {
-            if (normalMat == null) Debug.LogWarning($"[Platform3D] normalMat not assigned on {name}", this);
-            if (phase2Mat == null) Debug.LogWarning($"[Platform3D] phase2Mat not assigned on {name}", this);
-            if (renderers == null || renderers.Length == 0) Debug.LogWarning($"[Platform3D] No renderers found on {name}", this);
-        }
-    }
-
-    private void Start()
-    {
-        // Auto-sync visuals to current game phase at spawn time.
-        if (GameManager.Instance != null && GameManager.Instance.Phase == GameManager.GamePhase.Phase2_IdHunt)
-            SetVariant(VisualVariant.Phase2Special);
-        else
-            SetVariant(VisualVariant.Normal);
     }
 
     public void OnPlayerBounced()

@@ -138,7 +138,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1629197898983261753}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c06f47826953cbf40b9d39d466ae98eb, type: 3}
+  m_Script: {fileID: 11500000, guid: 959507b5222c8714eb6f9d2fd85fc3ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClueCollectible
   sfx: {fileID: 0}
