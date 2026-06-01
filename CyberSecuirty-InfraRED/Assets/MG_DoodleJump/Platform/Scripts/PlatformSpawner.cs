@@ -1,4 +1,3 @@
-// PlatformSpawner.cs
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -49,8 +48,20 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     [Header("IDs (Phase 2)")]
     [SerializeField] private GameObject idPrefab;
-    [SerializeField, Range(0f, 1f)] private float idChancePerMainPlatform = 0.10f;
-    [SerializeField, Min(0f)] private float minIdSeparationY = 16f;
+
+    [Tooltip("Base chance per MAIN platform during Phase2.")]
+    [SerializeField, Range(0f, 1f)] private float idChancePerMainPlatform = 0.35f;
+
+    [Tooltip("Extra IDs spawned beyond the required amount (makes the hunt feel active).")]
+    [SerializeField, Min(0)] private int extraIdsToSpawn = 4;
+
+    [Tooltip("Force an ID after this many MAIN platforms without spawning one.")]
+    [SerializeField, Min(1)] private int forceIdAfterNoSpawnBeats = 3;
+
+    [Tooltip("Min vertical spacing between IDs.")]
+    [SerializeField, Min(0f)] private float minIdSeparationY = 10f;
+
+    [Tooltip("Height above platform top for the ID pickup.")]
     [SerializeField, Min(0f)] private float idWorldYOffset = 1.0f;
 
     [Header("Orientation")]
@@ -78,12 +89,15 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private Quaternion rot;
 
+    // Phase flags
     private bool phase2VisualsOnly;
     private bool phase2;
 
+    // IDs runtime
     private int idsToSpawn;
     private int idsSpawned;
     private float lastIdY = float.NegativeInfinity;
+    private int beatsSinceLastId; // pity timer
 
     private void Awake()
     {
@@ -122,6 +136,7 @@ public sealed class PlatformSpawner : MonoBehaviour
 
         idsToSpawn = 0;
         idsSpawned = 0;
+        beatsSinceLastId = 0;
 
         if (spawnStartPlatform)
         {
@@ -168,17 +183,15 @@ public sealed class PlatformSpawner : MonoBehaviour
         phase2 = true;
         phase2VisualsOnly = true;
 
-        idsToSpawn = Mathf.Max(0, idsRequired);
+        // Spawn MORE than required so the world feels active.
+        idsToSpawn = Mathf.Max(0, idsRequired) + Mathf.Max(0, extraIdsToSpawn);
         idsSpawned = 0;
+        beatsSinceLastId = 0;
         lastIdY = float.NegativeInfinity;
 
         SwapAllPlatformsToPhase2Global();
     }
 
-    /// <summary>
-    /// Guaranteed swap: affects ALL Platform3D in the scene (not just tracked queue).
-    /// Call this at transition moment.
-    /// </summary>
     public void SwapAllPlatformsToPhase2Global()
     {
 #if UNITY_2022_2_OR_NEWER
@@ -238,8 +251,8 @@ public sealed class PlatformSpawner : MonoBehaviour
             if (plat != null) plat.SetVariant(Platform3D.VisualVariant.Phase2Special);
         }
 
-        if (phase2)
-            TrySpawnIdOnPlatform(platform, y, isMain);
+        if (phase2 && isMain)
+            TrySpawnIdOnPlatform(platform, y);
 
         alive.Enqueue(platform);
         Remember(x, y);
@@ -251,13 +264,27 @@ public sealed class PlatformSpawner : MonoBehaviour
         }
     }
 
-    private void TrySpawnIdOnPlatform(Transform platformRoot, float platformY, bool isMain)
+    private void TrySpawnIdOnPlatform(Transform platformRoot, float platformY)
     {
-        if (!isMain) return;
         if (idPrefab == null) return;
         if (idsSpawned >= idsToSpawn) return;
-        if (platformY < lastIdY + minIdSeparationY) return;
-        if (Random.value > idChancePerMainPlatform) return;
+
+        // Space them out vertically.
+        if (platformY < lastIdY + minIdSeparationY)
+        {
+            beatsSinceLastId++;
+            return;
+        }
+
+        // Pity timer: force if we went too long without one.
+        bool force = beatsSinceLastId >= forceIdAfterNoSpawnBeats;
+        bool roll = Random.value <= idChancePerMainPlatform;
+
+        if (!force && !roll)
+        {
+            beatsSinceLastId++;
+            return;
+        }
 
         var col = platformRoot.GetComponentInChildren<Collider>();
         Vector3 worldPos = (col != null)
@@ -268,6 +295,7 @@ public sealed class PlatformSpawner : MonoBehaviour
 
         idsSpawned++;
         lastIdY = platformY;
+        beatsSinceLastId = 0;
     }
 
     private bool TryFindValidX(float y, out float x)

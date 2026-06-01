@@ -31,7 +31,7 @@ public sealed class GameManager : MonoBehaviour
 
     [Header("UI - Phase 2 (IDs)")]
     [SerializeField] private CanvasGroup idUi;
-    [SerializeField] private TMP_Text idCountText; // "IDs: 0/3"
+    [SerializeField] private TMP_Text idCountText; // "Collect all IDs: 0/3"
 
     [Header("Panels")]
     [SerializeField] private GameObject deathPanel;
@@ -227,7 +227,7 @@ public sealed class GameManager : MonoBehaviour
     private void UpdateIdUI()
     {
         if (idCountText != null)
-            idCountText.text = $"IDs: {idsCollected}/{idsRequired}";
+            idCountText.text = $"Collect all IDs: {idsCollected}/{idsRequired}";
     }
 
     // ---------------- Presentation ----------------

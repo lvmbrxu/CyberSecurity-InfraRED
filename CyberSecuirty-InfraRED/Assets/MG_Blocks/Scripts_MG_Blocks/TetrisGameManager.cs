@@ -8,10 +8,19 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Min(1)] public int width = 10;
     [Min(1)] public int height = 10;
 
-    [Header("Grid World (cell centers)")]
-    public Vector3 gridOrigin = new Vector3(-4.5f, -4.5f, 0f);
-    public float cellSize = 1f;
+    [Header("Board Frame Markers (GREEN frame)")]
+    public Transform boardBottomLeft;
+    public Transform boardTopRight;
+    [Min(0f)] public float boardPadding = 0.05f;
+
+    [Header("Hand Frame Markers (BLUE frame)")]
+    public Transform handBottomLeft;
+    public Transform handTopRight;
+    [Min(0f)] public float handPadding = 0.05f;
+
+    [Header("Depth")]
     public float gridZ = 0f;
+    public float handZ = 0f;
 
     [Header("Camera")]
     public Camera cam;
@@ -24,15 +33,13 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Header("Piece Materials (textures/colors)")]
     public Material[] pieceMaterials;
 
-    [Header("Hand (3 pieces shown)")]
-    public Vector3 handSpawnOffset = new Vector3(0f, 3.5f, 0f);
-    public float handSpacingCells = 4f;
+    [Header("Piece Rules")]
     public bool allowRotation = true;
 
     [Header("Difficulty")]
-    [Range(0f, 1f)] public float solvableHandChance = 0.75f;     // base chance
-    public bool scaleDifficultyOverTime = true;                 // reduce chance as board fills
-    [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;  // at near-full board
+    [Range(0f, 1f)] public float solvableHandChance = 0.75f;
+    public bool scaleDifficultyOverTime = true;
+    [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;
 
     [Header("Random Seed (0 = random)")]
     public int seed = 0;
@@ -45,6 +52,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     public AudioClip pickupBlockSound;
     public AudioClip placeBlockSound;
 
+    // Public access used by PieceView
     public float CellSize => cellSize;
     public float GridZ => gridZ;
     public Camera Camera => cam;
@@ -55,6 +63,10 @@ public sealed class TetrisGameManager : MonoBehaviour
     readonly List<PieceView> handPieces = new();
     System.Random rng;
     bool ended;
+
+    // Computed from markers
+    float cellSize;
+    Vector3 boardStartCenter;
 
     void Awake()
     {
@@ -67,8 +79,51 @@ public sealed class TetrisGameManager : MonoBehaviour
         occ = new bool[width, height];
         placedVisual = new GameObject[width, height];
 
+        RecalculateBoardLayout();
         BuildGridVisuals();
         DealNewHandOrGameOver();
+    }
+
+    void RecalculateBoardLayout()
+    {
+        if (!boardBottomLeft || !boardTopRight)
+        {
+            Debug.LogError("Board markers are missing. Assign BoardBottomLeft and BoardTopRight.");
+            return;
+        }
+
+        Vector3 bl = boardBottomLeft.position;
+        Vector3 tr = boardTopRight.position;
+
+        float usableWidth = Mathf.Abs(tr.x - bl.x) - boardPadding * 2f;
+        float usableHeight = Mathf.Abs(tr.y - bl.y) - boardPadding * 2f;
+
+        if (usableWidth <= 0f || usableHeight <= 0f)
+        {
+            Debug.LogError("Board usable area is invalid. Check board markers/padding.");
+            return;
+        }
+
+        // Keep cells square by using the limiting dimension
+        float cellFromWidth = usableWidth / width;
+        float cellFromHeight = usableHeight / height;
+        cellSize = Mathf.Min(cellFromWidth, cellFromHeight);
+
+        float usedWidth = cellSize * width;
+        float usedHeight = cellSize * height;
+
+        float extraX = usableWidth - usedWidth;
+        float extraY = usableHeight - usedHeight;
+
+        float minX = Mathf.Min(bl.x, tr.x) + boardPadding + extraX * 0.5f;
+        float minY = Mathf.Min(bl.y, tr.y) + boardPadding + extraY * 0.5f;
+
+        // center of board cell (0,0)
+        boardStartCenter = new Vector3(
+            minX + cellSize * 0.5f,
+            minY + cellSize * 0.5f,
+            gridZ
+        );
     }
 
     public void PlayPickupSound()
@@ -84,13 +139,19 @@ public sealed class TetrisGameManager : MonoBehaviour
     }
 
     public Vector3 GridToWorld(Vector2Int g)
-        => new Vector3(gridOrigin.x + g.x * cellSize, gridOrigin.y + g.y * cellSize, gridZ);
+    {
+        return new Vector3(
+            boardStartCenter.x + g.x * cellSize,
+            boardStartCenter.y + g.y * cellSize,
+            gridZ
+        );
+    }
 
     public Vector2Int WorldToGrid(Vector3 w)
     {
-        float lx = (w.x - gridOrigin.x) / cellSize;
-        float ly = (w.y - gridOrigin.y) / cellSize;
-        return new Vector2Int(Mathf.FloorToInt(lx + 0.5f), Mathf.FloorToInt(ly + 0.5f));
+        float lx = (w.x - boardStartCenter.x) / cellSize;
+        float ly = (w.y - boardStartCenter.y) / cellSize;
+        return new Vector2Int(Mathf.RoundToInt(lx), Mathf.RoundToInt(ly));
     }
 
     bool Inside(int x, int y) => x >= 0 && x < width && y >= 0 && y < height;
@@ -104,6 +165,7 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         Ray r = cam.ScreenPointToRay(mouse.position.ReadValue());
         Plane p = new Plane(Vector3.back, new Vector3(0f, 0f, gridZ));
+
         if (!p.Raycast(r, out float enter)) return false;
 
         worldPoint = r.GetPoint(enter);
@@ -116,10 +178,13 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (!gridCellPrefab) return;
 
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
         {
-            var go = Instantiate(gridCellPrefab, GridToWorld(new Vector2Int(x, y)), Quaternion.identity, transform);
-            go.name = $"Grid_{x}_{y}";
+            for (int x = 0; x < width; x++)
+            {
+                var go = Instantiate(gridCellPrefab, GridToWorld(new Vector2Int(x, y)), Quaternion.identity, transform);
+                go.name = $"Grid_{x}_{y}";
+                go.transform.localScale = Vector3.one * cellSize;
+            }
         }
     }
 
@@ -128,7 +193,9 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (ended) return;
 
         for (int i = 0; i < handPieces.Count; i++)
+        {
             if (handPieces[i]) Destroy(handPieces[i].gameObject);
+        }
         handPieces.Clear();
 
         float chance = solvableHandChance;
@@ -158,27 +225,49 @@ public sealed class TetrisGameManager : MonoBehaviour
             hand = GenerateRandomHand();
         }
 
-        Vector3 topCenter = GridToWorld(new Vector2Int(width / 2, height - 1));
-        topCenter += handSpawnOffset;
-        topCenter.z = gridZ;
+        Vector3[] spawnPoints = GetHandSpawnPoints();
 
         for (int i = 0; i < 3; i++)
         {
-            float offsetX = (i - 1) * handSpacingCells * cellSize;
-            Vector3 spawnWorld = topCenter + new Vector3(offsetX, 0f, 0f);
-
             var root = new GameObject($"HandPiece_{i}");
-            root.transform.position = spawnWorld;
+            root.transform.position = spawnPoints[i];
 
             var pv = root.AddComponent<PieceView>();
             Material mat = PickMaterial();
-            pv.Init(this, hand[i].shape, pieceBlockPrefab, mat, spawnWorld);
+            pv.Init(this, hand[i].shape, pieceBlockPrefab, mat, spawnPoints[i]);
+
             handPieces.Add(pv);
         }
 
-        // If literally no piece placeable -> game over
         if (!AnyHandPiecePlaceable())
             GameOver_NoSpace();
+    }
+
+    Vector3[] GetHandSpawnPoints()
+    {
+        Vector3[] result = new Vector3[3];
+
+        if (!handBottomLeft || !handTopRight)
+        {
+            Debug.LogError("Hand markers are missing. Assign HandBottomLeft and HandTopRight.");
+            return result;
+        }
+
+        Vector3 bl = handBottomLeft.position;
+        Vector3 tr = handTopRight.position;
+
+        float minX = Mathf.Min(bl.x, tr.x) + handPadding;
+        float maxX = Mathf.Max(bl.x, tr.x) - handPadding;
+        float minY = Mathf.Min(bl.y, tr.y) + handPadding;
+        float maxY = Mathf.Max(bl.y, tr.y) - handPadding;
+
+        float y = (minY + maxY) * 0.5f;
+
+        result[0] = new Vector3(Mathf.Lerp(minX, maxX, 0.2f), y, handZ);
+        result[1] = new Vector3(Mathf.Lerp(minX, maxX, 0.5f), y, handZ);
+        result[2] = new Vector3(Mathf.Lerp(minX, maxX, 0.8f), y, handZ);
+
+        return result;
     }
 
     SolvableHandGenerator.HandPiece[] GenerateRandomHand()
@@ -186,9 +275,12 @@ public sealed class TetrisGameManager : MonoBehaviour
         var h = new SolvableHandGenerator.HandPiece[3];
         for (int i = 0; i < 3; i++)
         {
-            // uses your library list + rotation rules
             var shape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
-            h[i] = new SolvableHandGenerator.HandPiece { shape = shape, rotation = 0 };
+            h[i] = new SolvableHandGenerator.HandPiece
+            {
+                shape = shape,
+                rotation = 0
+            };
         }
         return h;
     }
@@ -197,8 +289,12 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         int filled = 0;
         for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-            if (occ[x, y]) filled++;
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (occ[x, y]) filled++;
+            }
+        }
 
         int total = width * height;
         return total == 0 ? 0f : (float)filled / total;
@@ -244,9 +340,13 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (startX > endX || startY > endY) return false;
 
         for (int y = startY; y <= endY; y++)
-        for (int x = startX; x <= endX; x++)
-            if (CanPlace(shape, new Vector2Int(x, y)))
-                return true;
+        {
+            for (int x = startX; x <= endX; x++)
+            {
+                if (CanPlace(shape, new Vector2Int(x, y)))
+                    return true;
+            }
+        }
 
         return false;
     }
@@ -257,6 +357,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             int x = anchor.x + shape[i].x;
             int y = anchor.y + shape[i].y;
+
             if (!Inside(x, y)) return false;
             if (occ[x, y]) return false;
         }
@@ -286,7 +387,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
         else
         {
-            // if remaining pieces can't be placed, player loses
             if (!AnyHandPiecePlaceable())
                 GameOver_NoSpace();
         }
@@ -310,6 +410,7 @@ public sealed class TetrisGameManager : MonoBehaviour
 
                 var go = Instantiate(placedBlockPrefab, pos, Quaternion.identity, transform);
                 go.name = $"Placed_{x}_{y}";
+                go.transform.localScale = Vector3.one * cellSize;
                 placedVisual[x, y] = go;
 
                 ApplyMaterial(go, mat);
@@ -326,7 +427,13 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             bool full = true;
             for (int x = 0; x < width; x++)
-                if (!occ[x, y]) { full = false; break; }
+            {
+                if (!occ[x, y])
+                {
+                    full = false;
+                    break;
+                }
+            }
             if (full) fullRows.Add(y);
         }
 
@@ -334,7 +441,13 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             bool full = true;
             for (int y = 0; y < height; y++)
-                if (!occ[x, y]) { full = false; break; }
+            {
+                if (!occ[x, y])
+                {
+                    full = false;
+                    break;
+                }
+            }
             if (full) fullCols.Add(x);
         }
 
@@ -372,8 +485,10 @@ public sealed class TetrisGameManager : MonoBehaviour
     static void ApplyMaterial(GameObject go, Material mat)
     {
         if (!mat) return;
+
         var r = go.GetComponentInChildren<Renderer>();
         if (!r) return;
+
         r.sharedMaterial = mat;
     }
 
@@ -385,4 +500,34 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (ui) ui.ShowGameOver();
         else Time.timeScale = 0f;
     }
+
+#if UNITY_EDITOR
+    void OnDrawGizmosSelected()
+    {
+        if (boardBottomLeft && boardTopRight)
+        {
+            Gizmos.color = Color.green;
+            DrawRect(boardBottomLeft.position, boardTopRight.position, gridZ);
+        }
+
+        if (handBottomLeft && handTopRight)
+        {
+            Gizmos.color = Color.cyan;
+            DrawRect(handBottomLeft.position, handTopRight.position, handZ);
+        }
+    }
+
+    void DrawRect(Vector3 a, Vector3 b, float z)
+    {
+        Vector3 bl = new Vector3(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), z);
+        Vector3 br = new Vector3(Mathf.Max(a.x, b.x), Mathf.Min(a.y, b.y), z);
+        Vector3 tr = new Vector3(Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y), z);
+        Vector3 tl = new Vector3(Mathf.Min(a.x, b.x), Mathf.Max(a.y, b.y), z);
+
+        Gizmos.DrawLine(bl, br);
+        Gizmos.DrawLine(br, tr);
+        Gizmos.DrawLine(tr, tl);
+        Gizmos.DrawLine(tl, bl);
+    }
+#endif
 }
