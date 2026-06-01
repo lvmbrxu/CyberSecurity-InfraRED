@@ -1027,7 +1027,7 @@ Light:
   serializedVersion: 12
   m_Type: 1
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 1
+  m_Intensity: 0.11
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -1090,7 +1090,7 @@ Transform:
   m_GameObject: {fileID: 1208338946}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.19, z: 17.46}
+  m_LocalPosition: {x: 0, y: -2.19, z: -7.61}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1337,8 +1337,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a2a82d8988dab441a33878ab26867ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlockBlastGameManager
-  width: 15
-  height: 15
+  width: 10
+  height: 10
   boardBottomLeft: {fileID: 1994892635}
   boardTopRight: {fileID: 1215498998}
   boardPadding: 0
@@ -1352,7 +1352,10 @@ MonoBehaviour:
   placedBlockPrefab: {fileID: 1087304637}
   pieceBlockPrefab: {fileID: 1138061608}
   pieceMaterials:
-  - {fileID: 2100000, guid: c6131c115ad4c554294d5c3ab10e990e, type: 2}
+  - {fileID: 2100000, guid: 409549263f246fa4486e26a20f189d30, type: 2}
+  - {fileID: 2100000, guid: 006f02299a845194cb9a5bdd664bdea6, type: 2}
+  - {fileID: 2100000, guid: 22cad3ad8d26ab344a9a3d9e0ce2925e, type: 2}
+  - {fileID: 2100000, guid: fb9ca12045f1bcd4d8dc42ebec3a7330, type: 2}
   allowRotation: 1
   solvableHandChance: 0.865
   scaleDifficultyOverTime: 1
@@ -2955,18 +2958,6 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 268697203464567188, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 268697203464567188, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 268697203464567188, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 268697203464567188, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
       propertyPath: m_LocalPosition.x
       value: -76.600006
       objectReference: {fileID: 0}
@@ -3009,10 +3000,6 @@ PrefabInstance:
     - target: {fileID: 4583265343535908570, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
       propertyPath: m_Name
       value: PieceCubePrefab
-      objectReference: {fileID: 0}
-    - target: {fileID: 4583265343535908570, guid: 44a30961e5c8ddd47a86a4a7e90baa6b, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
