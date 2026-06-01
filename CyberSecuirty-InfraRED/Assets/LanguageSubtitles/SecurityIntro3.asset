@@ -10,9 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9c4e093d2870fd747b1abd1edd3aa990, type: 3}
-  m_Name: Line One
+  m_Name: SecurityIntro3
   m_EditorClassIdentifier: Assembly-CSharp::Game.Dialogue.DialogueLine
-  englishText: test
+  englishText: 'First of all, you need to get through the Security Check Building
+    right here.
+
+'
   dutchText: 
   englishVoice: {fileID: 0}
   dutchVoice: {fileID: 0}
