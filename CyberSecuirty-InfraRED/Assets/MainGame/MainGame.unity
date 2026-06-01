@@ -9646,6 +9646,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Settings
       objectReference: {fileID: 0}
+    - target: {fileID: 2950503758439241001, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: c356ec9eeb4824f4a8b076c04d8614c8, type: 3}
     - target: {fileID: 3710241486416056865, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
@@ -9680,11 +9684,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 60
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 60
+      value: 120
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_LocalPosition.x
