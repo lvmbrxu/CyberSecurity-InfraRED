@@ -477,6 +477,18 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: OpenSoundSettings
       objectReference: {fileID: 0}
+    - target: {fileID: 6771349027494085420, guid: b0bb39617a50c1543aad64c64ce068ea, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6771349027494085420, guid: b0bb39617a50c1543aad64c64ce068ea, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6771349027494085420, guid: b0bb39617a50c1543aad64c64ce068ea, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7176349073278257090, guid: b0bb39617a50c1543aad64c64ce068ea, type: 3}
       propertyPath: m_Name
       value: Mainpanel Variant
