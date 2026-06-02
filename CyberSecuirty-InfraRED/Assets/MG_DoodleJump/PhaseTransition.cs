@@ -22,6 +22,10 @@ public sealed class PhaseTransition : MonoBehaviour
     [Header("Overlay Sort")]
     [SerializeField] private int sortingOrder = 9999;
 
+    [Header("Music")]
+    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioClip phase2Music;
+
     public bool IsBusy { get; private set; }
 
     private void Awake()
@@ -43,7 +47,16 @@ public sealed class PhaseTransition : MonoBehaviour
         fadeImage.transform.SetAsLastSibling();
 
         yield return FadeTo(1f, fadeOutTime);
+
+        // Switch music while screen is black.
+        if (musicSource != null && phase2Music != null)
+        {
+            musicSource.clip = phase2Music;
+            musicSource.Play();
+        }
+
         swap?.Invoke();
+
         yield return FadeTo(0f, fadeInTime);
 
         IsBusy = false;
