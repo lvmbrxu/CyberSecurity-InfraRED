@@ -7294,7 +7294,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857d9699c3eda4548b2d75f62d0a5b94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OTEScript
-  sceneToLoad: MG_Blocks
+  sceneToLoad: MG-Tetris
   lightOnn: {fileID: 2001655955}
   lightOff: {fileID: 495337581}
   lightOnn2: {fileID: 700906043}
@@ -7560,7 +7560,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857d9699c3eda4548b2d75f62d0a5b94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OTEScript
-  sceneToLoad: MG_DoodleJump
+  sceneToLoad: MG-Doodle
   lightOnn: {fileID: 176032337}
   lightOff: {fileID: 889580513}
   lightOnn2: {fileID: 501906526}
@@ -25024,7 +25024,7 @@ GameObject:
   - component: {fileID: 1428861063}
   - component: {fileID: 1428861062}
   m_Layer: 0
-  m_Name: Game2OTE (1)
+  m_Name: Game3OTE
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -25042,7 +25042,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857d9699c3eda4548b2d75f62d0a5b94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OTEScript
-  sceneToLoad: MG_Grandma
+  sceneToLoad: MG-Grandma
   lightOnn: {fileID: 0}
   lightOff: {fileID: 0}
   lightOnn2: {fileID: 0}
