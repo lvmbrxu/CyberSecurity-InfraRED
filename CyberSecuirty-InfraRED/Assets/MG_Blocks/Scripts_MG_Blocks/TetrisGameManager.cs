@@ -4,9 +4,9 @@ using UnityEngine.InputSystem;
 
 public sealed class TetrisGameManager : MonoBehaviour
 {
-    [Header("Board")]
-    [Min(1)] public int width = 10;
-    [Min(1)] public int height = 10;
+    [Header("Board Size")]
+    [Min(1)] public int width = 8;
+    [Min(1)] public int height = 8;
 
     [Header("Board Frame Markers (GREEN frame)")]
     public Transform boardBottomLeft;
@@ -38,11 +38,15 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Header("Piece Materials (textures/colors)")]
     public Material[] pieceMaterials;
 
+    [Header("Ghost Preview (NEW)")]
+    public Material ghostValidMaterial;
+    public Material ghostInvalidMaterial;
+
     [Header("Piece Rules")]
     public bool allowRotation = true;
 
     [Header("Difficulty")]
-    [Range(0f, 1f)] public float solvableHandChance = 0.75f;
+    [Range(0f, 1f)] public float solvableHandChance = 0.80f;
     public bool scaleDifficultyOverTime = true;
     [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;
 
@@ -53,23 +57,29 @@ public sealed class TetrisGameManager : MonoBehaviour
     public int pointsPerClueCollected = 350;
     public float comboMultiplierStep = 0.65f;
 
+    [Header("Score Fly Text (updates score only on arrival)")]
+    public GameObject scoreFlyTextPrefab;
+    public RectTransform scoreTargetRect;
+    public Vector2Int scoreFlyFromCell = new Vector2Int(-1, -1);
+
     [Header("Clues")]
     public bool enableClues = true;
     [Range(0f, 1f)] public float clueChancePerPlacedCell = 0.06f;
-    public int cluesTargetToWin = 0; // if > 0 => win condition
+    public int cluesTargetToWin = 0;
     public GameObject clueVisualPrefab;
-    public Vector3 clueLocalOffset = new Vector3(0f, 0.55f, 0f);
+    public Vector3 clueLocalOffset = new Vector3(0f, 0.55f, -0.02f);
     public Vector3 clueLocalScale = Vector3.one * 0.25f;
 
     [Header("Clear VFX (optional)")]
     public ParticleSystem clearCellVfxPrefab;
-    public GameObject clearRowVfxPrefab; // add VFX_SweepFade on prefab
-    public GameObject clearColVfxPrefab; // add VFX_SweepFade on prefab
+    public GameObject clearRowVfxPrefab;
+    public GameObject clearColVfxPrefab;
+    [SerializeField] float sweepZOffset = -0.03f;
 
-    [Header("Juice (3,4,5)")]
-    public CameraShake cameraShake;       // CameraShake on main camera
-    public Canvas uiCanvas;               // your main canvas
-    public GameObject clueFlyIconPrefab;  // UI Image prefab with ClueFlyToUI
+    [Header("Juice: Camera & Clue Fly")]
+    public CameraShake cameraShake;
+    public Canvas uiCanvas;
+    public GameObject clueFlyIconPrefab;
 
     [Header("Random Seed (0 = random)")]
     public int seed = 0;
@@ -82,15 +92,14 @@ public sealed class TetrisGameManager : MonoBehaviour
     public AudioClip pickupBlockSound;
     public AudioClip placeBlockSound;
 
-    // Public access for PieceView
     public float CellSize => cellSize;
     public float GridZ => gridZ;
     public Camera Camera => cam;
 
     bool[,] occ;
     GameObject[,] placedVisual;
-
     readonly List<PieceView> handPieces = new();
+
     System.Random rng;
     bool ended;
 
@@ -99,7 +108,8 @@ public sealed class TetrisGameManager : MonoBehaviour
     Transform handBackgroundInstance;
 
     int score;
-    int combo;       // 1 = no combo
+    int pendingScore;
+    int combo;
     int cluesFound;
 
     void Awake()
@@ -121,6 +131,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         EnsureHandBackground();
 
         score = 0;
+        pendingScore = 0;
         combo = 1;
         cluesFound = 0;
 
@@ -131,7 +142,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         DealNewHandOrGameOver();
     }
 
-    // ---------------- Audio ----------------
     public void PlayPickupSound()
     {
         if (audioSource && pickupBlockSound)
@@ -144,7 +154,6 @@ public sealed class TetrisGameManager : MonoBehaviour
             audioSource.PlayOneShot(placeBlockSound);
     }
 
-    // ---------------- Layout ----------------
     void RecalculateBoardLayout()
     {
         if (!boardBottomLeft || !boardTopRight || !boardSpace)
@@ -216,7 +225,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         handBackgroundInstance.localScale = new Vector3(w, h, 1f);
     }
 
-    // ---------------- Grid conversions ----------------
     public Vector3 GridToWorld(Vector2Int g)
     {
         return new Vector3(
@@ -251,7 +259,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         return true;
     }
 
-    // ---------------- Visuals ----------------
     void BuildGridVisuals()
     {
         if (!gridCellPrefab) return;
@@ -265,7 +272,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    // ---------------- Hand generation ----------------
     void DealNewHandOrGameOver()
     {
         if (ended) return;
@@ -352,7 +358,10 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         var h = new SolvableHandGenerator.HandPiece[3];
         for (int i = 0; i < 3; i++)
-            h[i] = new SolvableHandGenerator.HandPiece { shape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation), rotation = 0 };
+        {
+            var shape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
+            h[i] = new SolvableHandGenerator.HandPiece { shape = shape, rotation = 0 };
+        }
         return h;
     }
 
@@ -363,7 +372,8 @@ public sealed class TetrisGameManager : MonoBehaviour
         for (int x = 0; x < width; x++)
             if (occ[x, y]) filled++;
 
-        return (width * height) == 0 ? 0f : (float)filled / (width * height);
+        int total = width * height;
+        return total == 0 ? 0f : (float)filled / total;
     }
 
     Material PickMaterial()
@@ -372,7 +382,35 @@ public sealed class TetrisGameManager : MonoBehaviour
         return pieceMaterials[rng.Next(0, pieceMaterials.Length)];
     }
 
-    // ---------------- Placement ----------------
+    public bool CanPlacePublic(Vector2Int[] shape, Vector2Int anchor)
+    {
+        for (int i = 0; i < shape.Length; i++)
+        {
+            int x = anchor.x + shape[i].x;
+            int y = anchor.y + shape[i].y;
+            if (x < 0 || x >= width || y < 0 || y >= height) return false;
+            if (occ[x, y]) return false;
+        }
+        return true;
+    }
+
+    Vector3 ScoreFlyOrigin()
+    {
+        if (scoreFlyFromCell.x >= 0 && scoreFlyFromCell.y >= 0 &&
+            scoreFlyFromCell.x < width && scoreFlyFromCell.y < height)
+            return GridToWorld(scoreFlyFromCell);
+
+        return GridToWorld(new Vector2Int(width / 2, height / 2));
+    }
+
+    Vector3 ComputeShapeWorldCenter(Vector2Int anchor, Vector2Int[] shape)
+    {
+        Vector3 sum = Vector3.zero;
+        for (int i = 0; i < shape.Length; i++)
+            sum += GridToWorld(new Vector2Int(anchor.x + shape[i].x, anchor.y + shape[i].y));
+        return sum / Mathf.Max(1, shape.Length);
+    }
+
     bool AnyHandPiecePlaceable()
     {
         for (int i = 0; i < handPieces.Count; i++)
@@ -407,22 +445,10 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         for (int y = startY; y <= endY; y++)
         for (int x = startX; x <= endX; x++)
-            if (CanPlace(shape, new Vector2Int(x, y)))
+            if (CanPlacePublic(shape, new Vector2Int(x, y)))
                 return true;
 
         return false;
-    }
-
-    bool CanPlace(Vector2Int[] shape, Vector2Int anchor)
-    {
-        for (int i = 0; i < shape.Length; i++)
-        {
-            int x = anchor.x + shape[i].x;
-            int y = anchor.y + shape[i].y;
-            if (!Inside(x, y)) return false;
-            if (occ[x, y]) return false;
-        }
-        return true;
     }
 
     public bool TryPlacePieceAtAnchor(PieceView piece, Vector2Int anchor)
@@ -432,36 +458,30 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         var shape = piece.Shape;
         if (shape == null || shape.Length == 0) return false;
-        if (!CanPlace(shape, anchor)) return false;
+        if (!CanPlacePublic(shape, anchor)) return false;
 
-        // placement drip
-        score += pointsPerBlockPlaced * shape.Length;
-        ui?.SetScore(score);
+        int placementGain = pointsPerBlockPlaced * shape.Length;
+        SpawnScoreFly(ComputeShapeWorldCenter(anchor, shape), placementGain);
 
         CommitPlacement(shape, anchor, piece.PieceMaterial);
         PlayPlaceSound();
 
-        int clearedLines, clearedCells, cluesCollected;
-        ClearLines(out clearedLines, out clearedCells, out cluesCollected);
+        int clearedLines, clearedCells;
+        int baseClearGain = ClearLines(out clearedLines, out clearedCells);
 
         if (clearedLines > 0)
         {
             combo = Mathf.Max(2, combo + 1);
-            float mult = 1f + (combo - 1) * comboMultiplierStep;
-
-            int clearScore = Mathf.RoundToInt((clearedLines * pointsPerLineClear + clearedCells * pointsPerCellCleared) * mult);
-            score += clearScore;
-
-            if (cluesCollected > 0)
-                score += cluesCollected * pointsPerClueCollected;
-
-            ui?.SetScore(score);
             ui?.SetCombo(combo);
-            ui?.SetClues(cluesFound, cluesTargetToWin);
+
+            float mult = 1f + (combo - 1) * comboMultiplierStep;
+            int finalClearGain = Mathf.RoundToInt(baseClearGain * mult);
+
+            SpawnScoreFly(ScoreFlyOrigin(), finalClearGain);
 
             if (cameraShake)
             {
-                float strengthMul = 1f + 0.35f * (clearedLines - 1) + 0.015f * clearedCells;
+                float strengthMul = 1f + 0.35f * (clearedLines - 1) + 0.02f * clearedCells;
                 float durationMul = 1f + 0.15f * (clearedLines - 1);
                 cameraShake.Kick(strengthMul, durationMul);
             }
@@ -475,19 +495,36 @@ public sealed class TetrisGameManager : MonoBehaviour
         handPieces.Remove(piece);
         Destroy(piece.gameObject);
 
-        // ✅ WIN CONDITION
-        if (enableClues && cluesTargetToWin > 0 && cluesFound >= cluesTargetToWin)
-        {
-            Win();
-            return true;
-        }
-
         if (handPieces.Count == 0)
             DealNewHandOrGameOver();
         else if (!AnyHandPiecePlaceable())
             GameOver_NoSpace();
 
         return true;
+    }
+
+    void SpawnScoreFly(Vector3 worldPos, int amount)
+    {
+        if (!uiCanvas || !scoreFlyTextPrefab || !scoreTargetRect) return;
+
+        var go = Instantiate(scoreFlyTextPrefab, uiCanvas.transform);
+        var fly = go.GetComponent<ScoreFlyToUI>();
+        if (!fly) { Destroy(go); return; }
+
+        pendingScore += amount;
+
+        fly.canvas = uiCanvas;
+        fly.uiTarget = scoreTargetRect;
+        fly.worldCamera = cam ? cam : Camera.main;
+
+        fly.OnArrive = () =>
+        {
+            pendingScore -= amount;
+            score += amount;
+            ui?.SetScore(score);
+        };
+
+        fly.Init(worldPos, $"+{amount}");
     }
 
     void CommitPlacement(Vector2Int[] shape, Vector2Int anchor, Material mat)
@@ -509,7 +546,6 @@ public sealed class TetrisGameManager : MonoBehaviour
 
             ApplyMaterial(go, mat);
 
-            // clue overlay
             var data = go.GetComponent<PlacedCellData>();
             if (!data) data = go.AddComponent<PlacedCellData>();
 
@@ -531,11 +567,10 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
     }
 
-    void ClearLines(out int clearedLines, out int clearedCells, out int cluesCollected)
+    int ClearLines(out int clearedLines, out int clearedCells)
     {
         clearedLines = 0;
         clearedCells = 0;
-        cluesCollected = 0;
 
         var fullRows = new List<int>(4);
         var fullCols = new List<int>(4);
@@ -557,7 +592,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
 
         if (fullRows.Count == 0 && fullCols.Count == 0)
-            return;
+            return 0;
 
         for (int i = 0; i < fullRows.Count; i++) SpawnRowClearVfx(fullRows[i]);
         for (int i = 0; i < fullCols.Count; i++) SpawnColClearVfx(fullCols[i]);
@@ -566,25 +601,21 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             int y = fullRows[i];
             for (int x = 0; x < width; x++)
-                ClearCell(x, y, ref clearedCells, ref cluesCollected);
+                ClearCell(x, y, ref clearedCells);
         }
 
         for (int i = 0; i < fullCols.Count; i++)
         {
             int x = fullCols[i];
             for (int y = 0; y < height; y++)
-                ClearCell(x, y, ref clearedCells, ref cluesCollected);
+                ClearCell(x, y, ref clearedCells);
         }
 
         clearedLines = fullRows.Count + fullCols.Count;
-
-        if (enableClues && cluesCollected > 0)
-        {
-            cluesFound += cluesCollected;
-        }
+        return clearedLines * pointsPerLineClear + clearedCells * pointsPerCellCleared;
     }
 
-    void ClearCell(int x, int y, ref int clearedCells, ref int cluesCollected)
+    void ClearCell(int x, int y, ref int clearedCells)
     {
         if (!occ[x, y]) return;
 
@@ -597,11 +628,8 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (go)
         {
             var data = go.GetComponent<PlacedCellData>();
-            if (data && data.hasClue)
-            {
-                cluesCollected++;
+            if (enableClues && data && data.hasClue)
                 TrySpawnClueFly(GridToWorld(new Vector2Int(x, y)));
-            }
 
             Destroy(go);
             placedVisual[x, y] = null;
@@ -627,9 +655,10 @@ public sealed class TetrisGameManager : MonoBehaviour
         Vector3 left = GridToWorld(new Vector2Int(0, y));
         Vector3 right = GridToWorld(new Vector2Int(width - 1, y));
         Vector3 center = (left + right) * 0.5f;
+        center.z += sweepZOffset;
 
         var go = Instantiate(clearRowVfxPrefab, center, Quaternion.identity);
-        go.transform.localScale = new Vector3(width * cellSize, cellSize * 0.25f, 1f);
+        go.transform.localScale = new Vector3(width * cellSize, cellSize * 0.6f, 1f);
         Destroy(go, 2f);
     }
 
@@ -640,9 +669,10 @@ public sealed class TetrisGameManager : MonoBehaviour
         Vector3 bottom = GridToWorld(new Vector2Int(x, 0));
         Vector3 top = GridToWorld(new Vector2Int(x, height - 1));
         Vector3 center = (bottom + top) * 0.5f;
+        center.z += sweepZOffset;
 
         var go = Instantiate(clearColVfxPrefab, center, Quaternion.identity);
-        go.transform.localScale = new Vector3(cellSize * 0.25f, height * cellSize, 1f);
+        go.transform.localScale = new Vector3(cellSize * 0.6f, height * cellSize, 1f);
         Destroy(go, 2f);
     }
 
@@ -653,16 +683,26 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         var go = Instantiate(clueFlyIconPrefab, uiCanvas.transform);
         var fly = go.GetComponent<ClueFlyToUI>();
-        if (!fly)
-        {
-            Destroy(go);
-            return;
-        }
+        if (!fly) { Destroy(go); return; }
 
         fly.canvas = uiCanvas;
         fly.uiTarget = ui.cluesTargetRect;
         fly.worldCamera = cam ? cam : Camera.main;
+        fly.OnArrive = OnClueArrived;
         fly.Init(worldPos);
+    }
+
+    void OnClueArrived()
+    {
+        if (!enableClues) return;
+
+        cluesFound++;
+        ui?.SetClues(cluesFound, cluesTargetToWin);
+
+        SpawnScoreFly(ScoreFlyOrigin(), pointsPerClueCollected);
+
+        if (cluesTargetToWin > 0 && cluesFound >= cluesTargetToWin)
+            Win();
     }
 
     static void ApplyMaterial(GameObject go, Material mat)
@@ -673,12 +713,13 @@ public sealed class TetrisGameManager : MonoBehaviour
         r.sharedMaterial = mat;
     }
 
-    // ✅ WIN / LOSE
     void Win()
     {
         if (ended) return;
         ended = true;
-        if (ui) ui.ShowWin(score);
+
+        int final = score + pendingScore;
+        if (ui) ui.ShowWin(final);
         else Time.timeScale = 0f;
     }
 
@@ -687,7 +728,8 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (ended) return;
         ended = true;
 
-        if (ui) ui.ShowGameOver(score);
+        int final = score + pendingScore;
+        if (ui) ui.ShowGameOver(final);
         else Time.timeScale = 0f;
     }
 }

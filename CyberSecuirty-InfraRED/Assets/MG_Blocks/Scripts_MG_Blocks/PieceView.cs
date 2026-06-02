@@ -1,6 +1,3 @@
-// PieceView.cs
-// Renders ONE draggable piece (world space).
-// Snaps to integer anchor while dragging, drops by integer anchor.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,8 +7,16 @@ public sealed class PieceView : MonoBehaviour
     public Vector2Int[] Shape { get; private set; }
     public Material PieceMaterial { get; private set; }
 
+    [Header("X-Ray While Hovering Board")]
+    [Range(0f, 1f)] public float hoverAlpha = 0.50f;
+    [Range(0f, 1f)] public float invalidHoverAlpha = 0.75f;
+    public Color invalidTint = new Color(1f, 0.2f, 0.2f, 1f); // red-ish
+    public Color validTint = Color.white;                      // normal
+    public float xrayZOffset = -0.01f;                         // slight offset to reduce z-fighting
+
     TetrisGameManager game;
     readonly List<Transform> blocks = new();
+    readonly List<Renderer> renderers = new();
 
     bool dragging;
     Vector2Int currentAnchor;
@@ -19,6 +24,13 @@ public sealed class PieceView : MonoBehaviour
 
     Vector3 pivotLocalOffset;
     Vector3 spawnWorld;
+
+    // MaterialPropertyBlock avoids instantiating materials (fast/no GC)
+    MaterialPropertyBlock mpb;
+    int baseColorId;
+    int colorId;
+
+    bool xrayApplied;
 
     public void Init(
         TetrisGameManager game,
@@ -31,6 +43,10 @@ public sealed class PieceView : MonoBehaviour
         Shape = shape;
         PieceMaterial = pieceMaterial;
         this.spawnWorld = spawnWorld;
+
+        mpb = new MaterialPropertyBlock();
+        baseColorId = Shader.PropertyToID("_BaseColor"); // URP
+        colorId = Shader.PropertyToID("_Color");         // Built-in
 
         transform.position = spawnWorld;
         BuildVisual(blockPrefab);
@@ -61,7 +77,6 @@ public sealed class PieceView : MonoBehaviour
             go.name = $"PieceBlock_{i}";
 
             go.transform.localScale = Vector3.one * game.CellSize;
-
             Vector3 local = new Vector3(Shape[i].x - center.x, Shape[i].y - center.y, 0f) * game.CellSize;
             go.transform.localPosition = local;
 
@@ -69,7 +84,11 @@ public sealed class PieceView : MonoBehaviour
                 go.AddComponent<BoxCollider>();
 
             ApplyMaterial(go, PieceMaterial);
+
             blocks.Add(go.transform);
+
+            var r = go.GetComponentInChildren<Renderer>();
+            if (r) renderers.Add(r);
         }
     }
 
@@ -98,8 +117,18 @@ public sealed class PieceView : MonoBehaviour
                 hasAnchor = true;
 
                 Vector3 snapped = game.GridToWorld(currentAnchor) + pivotLocalOffset;
-                snapped.z = game.GridZ;
+                snapped.z = game.GridZ + xrayZOffset; // slight offset so it reads over the board
                 transform.position = snapped;
+
+                // Apply X-ray effect while hovering over board
+                bool canPlace = game.CanPlacePublic(Shape, currentAnchor);
+                ApplyXRay(canPlace);
+            }
+            else
+            {
+                // Not on board plane
+                hasAnchor = false;
+                ClearXRay();
             }
         }
 
@@ -107,11 +136,65 @@ public sealed class PieceView : MonoBehaviour
         {
             dragging = false;
 
-            if (hasAnchor && game.TryPlacePieceAtAnchor(this, currentAnchor))
+            // Try to place
+            bool placed = hasAnchor && game.TryPlacePieceAtAnchor(this, currentAnchor);
+
+            ClearXRay();
+
+            if (placed)
                 return;
 
-            // failed -> return
             transform.position = spawnWorld;
+        }
+    }
+
+    void ApplyXRay(bool canPlace)
+    {
+        xrayApplied = true;
+
+        Color tint = canPlace ? validTint : invalidTint;
+        float a = canPlace ? hoverAlpha : invalidHoverAlpha;
+
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            var r = renderers[i];
+            if (!r) continue;
+
+            r.GetPropertyBlock(mpb);
+
+            // Preserve original color if the material has one
+            Color baseC = Color.white;
+            var mat = r.sharedMaterial;
+            if (mat)
+            {
+                if (mat.HasProperty(baseColorId)) baseC = mat.GetColor(baseColorId);
+                else if (mat.HasProperty(colorId)) baseC = mat.GetColor(colorId);
+            }
+
+            Color outC = new Color(baseC.r * tint.r, baseC.g * tint.g, baseC.b * tint.b, a);
+
+            if (mat && mat.HasProperty(baseColorId))
+                mpb.SetColor(baseColorId, outC);
+            else
+                mpb.SetColor(colorId, outC);
+
+            r.SetPropertyBlock(mpb);
+        }
+    }
+
+    void ClearXRay()
+    {
+        if (!xrayApplied) return;
+        xrayApplied = false;
+
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            var r = renderers[i];
+            if (!r) continue;
+
+            r.GetPropertyBlock(mpb);
+            mpb.Clear(); // remove overrides, returns to normal opaque material state
+            r.SetPropertyBlock(mpb);
         }
     }
 

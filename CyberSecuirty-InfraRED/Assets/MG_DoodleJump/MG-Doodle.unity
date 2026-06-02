@@ -2267,7 +2267,7 @@ MonoBehaviour:
   winPanel: {fileID: 935420832}
   startSecurity01: 0.25
   fallPenalty01: 0.1
-  unitsToFullSecurity: 50
+  unitsToFullSecurity: 300
   phase2VisualsAtSecurity01: 1
   fallBelowScreen: 2.5
   fallUnlockMargin: 1.5

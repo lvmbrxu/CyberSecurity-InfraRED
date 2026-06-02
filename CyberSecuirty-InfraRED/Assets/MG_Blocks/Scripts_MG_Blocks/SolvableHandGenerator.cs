@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Generates a 3-piece hand that is guaranteed to be placeable in some order
-/// on the current board occupancy.
+/// Generates a 3-piece hand that is solvable in some order,
+/// simulating line clears after each placement (Block Blast feel).
 /// </summary>
 public static class SolvableHandGenerator
 {
@@ -50,7 +50,8 @@ public static class SolvableHandGenerator
                 cand[i] = new HandPiece { shape = shape, rotation = rot };
             }
 
-            if (ExistsAnyOrderPlacement((bool[,])occ.Clone(), cand))
+            // IMPORTANT: lookahead with clears
+            if (ExistsAnyOrderPlacement_WithClears((bool[,])occ.Clone(), cand))
             {
                 hand = cand;
                 return true;
@@ -85,17 +86,57 @@ public static class SolvableHandGenerator
         return norm;
     }
 
-    private static bool ExistsAnyOrderPlacement(bool[,] occOriginal, HandPiece[] hand)
+    // ---------- NEW: lookahead solver with clears ----------
+    private static bool ExistsAnyOrderPlacement_WithClears(bool[,] occOriginal, HandPiece[] hand)
     {
         int[] idx = { 0, 1, 2 };
         foreach (var perm in Perm3(idx))
         {
-            if (CanPlaceAll((bool[,])occOriginal.Clone(),
-                    hand[perm[0]].shape,
-                    hand[perm[1]].shape,
-                    hand[perm[2]].shape))
+            var occ = (bool[,])occOriginal.Clone();
+            if (TrySolveDepth3_WithClears(occ, hand[perm[0]].shape, hand[perm[1]].shape, hand[perm[2]].shape))
                 return true;
         }
+        return false;
+    }
+
+    private static bool TrySolveDepth3_WithClears(bool[,] occ, Vector2Int[] a, Vector2Int[] b, Vector2Int[] c)
+    {
+        return TryPlaceAndRecurse(occ, a, () =>
+            TryPlaceAndRecurse(occ, b, () =>
+                TryPlaceAndRecurse(occ, c, () => true)
+            )
+        );
+    }
+
+    private static bool TryPlaceAndRecurse(bool[,] occ, Vector2Int[] shape, Func<bool> next)
+    {
+        int w = occ.GetLength(0);
+        int h = occ.GetLength(1);
+
+        // Try every anchor position
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            if (!CanPlaceAt(occ, x, y, shape))
+                continue;
+
+            // Apply piece
+            var touched = new List<Vector2Int>(shape.Length);
+            ApplyAt(occ, x, y, shape, true, touched);
+
+            // Apply clears
+            var cleared = new List<Vector2Int>(w + h);
+            ApplyLineClears(occ, cleared);
+
+            // Recurse
+            if (next())
+                return true;
+
+            // Undo clears + placement
+            UndoCells(occ, cleared);
+            UndoCells(occ, touched);
+        }
+
         return false;
     }
 
@@ -107,27 +148,6 @@ public static class SolvableHandGenerator
         yield return new[] { a[1], a[2], a[0] };
         yield return new[] { a[2], a[0], a[1] };
         yield return new[] { a[2], a[1], a[0] };
-    }
-
-    private static bool CanPlaceAll(bool[,] occ, Vector2Int[] a, Vector2Int[] b, Vector2Int[] c)
-        => TryPlaceOne(occ, a) && TryPlaceOne(occ, b) && TryPlaceOne(occ, c);
-
-    private static bool TryPlaceOne(bool[,] occ, Vector2Int[] shape)
-    {
-        int w = occ.GetLength(0);
-        int h = occ.GetLength(1);
-
-        for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++)
-        {
-            if (CanPlaceAt(occ, x, y, shape))
-            {
-                ApplyAt(occ, x, y, shape, true);
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool CanPlaceAt(bool[,] occ, int ax, int ay, Vector2Int[] shape)
@@ -146,9 +166,70 @@ public static class SolvableHandGenerator
         return true;
     }
 
-    private static void ApplyAt(bool[,] occ, int ax, int ay, Vector2Int[] shape, bool v)
+    private static void ApplyAt(bool[,] occ, int ax, int ay, Vector2Int[] shape, bool v, List<Vector2Int> touched)
     {
         for (int i = 0; i < shape.Length; i++)
-            occ[ax + shape[i].x, ay + shape[i].y] = v;
+        {
+            int x = ax + shape[i].x;
+            int y = ay + shape[i].y;
+            occ[x, y] = v;
+            touched.Add(new Vector2Int(x, y));
+        }
+    }
+
+    private static void ApplyLineClears(bool[,] occ, List<Vector2Int> clearedCells)
+    {
+        int w = occ.GetLength(0);
+        int h = occ.GetLength(1);
+
+        // Full rows
+        for (int y = 0; y < h; y++)
+        {
+            bool full = true;
+            for (int x = 0; x < w; x++)
+            {
+                if (!occ[x, y]) { full = false; break; }
+            }
+
+            if (full)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (occ[x, y])
+                    {
+                        occ[x, y] = false;
+                        clearedCells.Add(new Vector2Int(x, y));
+                    }
+                }
+            }
+        }
+
+        // Full cols
+        for (int x = 0; x < w; x++)
+        {
+            bool full = true;
+            for (int y = 0; y < h; y++)
+            {
+                if (!occ[x, y]) { full = false; break; }
+            }
+
+            if (full)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    if (occ[x, y])
+                    {
+                        occ[x, y] = false;
+                        clearedCells.Add(new Vector2Int(x, y));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void UndoCells(bool[,] occ, List<Vector2Int> cells)
+    {
+        for (int i = 0; i < cells.Count; i++)
+            occ[cells[i].x, cells[i].y] = true;
     }
 }

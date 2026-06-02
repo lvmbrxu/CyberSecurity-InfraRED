@@ -2,7 +2,6 @@ using UnityEngine;
 
 public sealed class CameraShake : MonoBehaviour
 {
-    [Header("Defaults")]
     public float baseDuration = 0.08f;
     public float baseStrength = 0.12f;
 
@@ -31,7 +30,6 @@ public sealed class CameraShake : MonoBehaviour
 
         timeLeft -= Time.deltaTime;
 
-        // Small random offset
         Vector2 r = Random.insideUnitCircle * strength;
         transform.localPosition = startLocalPos + new Vector3(r.x, r.y, 0f);
 

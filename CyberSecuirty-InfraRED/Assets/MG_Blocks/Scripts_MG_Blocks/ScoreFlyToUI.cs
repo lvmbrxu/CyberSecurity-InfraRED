@@ -1,43 +1,54 @@
 using System;
 using UnityEngine;
+using TMPro;
 
-public sealed class ClueFlyToUI : MonoBehaviour
+public sealed class ScoreFlyToUI : MonoBehaviour
 {
     public RectTransform uiTarget;
     public Canvas canvas;
     public Camera worldCamera;
 
-    public float travelTime = 0.45f;
+    [Header("Motion")]
+    public float travelTime = 0.9f;
     public AnimationCurve ease = AnimationCurve.EaseInOut(0, 0, 1, 1);
-    public float arcHeight = 60f;
+    public float arcHeight = 70f;
 
-    public Action OnArrive;
+    public Action OnArrive; 
 
+    TMP_Text tmp;
     RectTransform rt;
+    RectTransform canvasRect;
+
     Vector2 start;
     Vector2 end;
     float t;
 
     void Awake()
     {
+        tmp = GetComponent<TMP_Text>();
         rt = GetComponent<RectTransform>();
     }
 
-    public void Init(Vector3 worldStart)
+    public void Init(Vector3 worldStart, string text)
     {
-        Vector2 screen = RectTransformUtility.WorldToScreenPoint(worldCamera, worldStart);
-        RectTransform canvasRect = canvas.transform as RectTransform;
+        tmp.text = text;
 
+        canvasRect = canvas.transform as RectTransform;
+
+        // start = world -> canvas local
+        Vector2 startScreen = RectTransformUtility.WorldToScreenPoint(worldCamera, worldStart);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvasRect,
-            screen,
+            canvasRect, startScreen,
             canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : worldCamera,
             out start);
 
-        Vector2 targetScreen = RectTransformUtility.WorldToScreenPoint(worldCamera, uiTarget.position);
+        // end = target -> canvas local
+        Vector2 targetScreen = RectTransformUtility.WorldToScreenPoint(
+            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : worldCamera,
+            uiTarget.position);
+
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvasRect,
-            targetScreen,
+            canvasRect, targetScreen,
             canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : worldCamera,
             out end);
 
@@ -58,7 +69,7 @@ public sealed class ClueFlyToUI : MonoBehaviour
 
         if (u >= 1f)
         {
-            OnArrive?.Invoke();
+            OnArrive?.Invoke();  
             Destroy(gameObject);
         }
     }

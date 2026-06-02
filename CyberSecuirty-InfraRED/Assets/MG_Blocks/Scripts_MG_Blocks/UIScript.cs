@@ -5,8 +5,8 @@ using TMPro;
 public sealed class UIScript : MonoBehaviour
 {
     [Header("Panels")]
-    public GameObject gameOverPanel;  // lose canvas/panel root
-    public GameObject winPanel;       // win canvas/panel root
+    public GameObject gameOverPanel;  // your lose canvas/panel root
+    public GameObject winPanel;       // your win canvas/panel root
 
     [Header("HUD: Score (assign either TMP or Text)")]
     public TMP_Text scoreTMP;
@@ -21,7 +21,7 @@ public sealed class UIScript : MonoBehaviour
     public TMP_Text cluesTMP;
     public Text cluesText;
 
-    [Tooltip("RectTransform of your clues text (target for fly-to-UI).")]
+    [Tooltip("Drag the RectTransform of your clues text here (target for fly-to-UI).")]
     public RectTransform cluesTargetRect;
 
     [Header("Final Score Text (optional, shown on win/lose panels)")]
