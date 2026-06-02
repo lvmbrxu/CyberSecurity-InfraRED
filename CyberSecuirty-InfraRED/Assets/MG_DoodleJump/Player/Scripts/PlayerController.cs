@@ -30,6 +30,10 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
     [SerializeField] private float respawnYOffset = 2.5f;
     [SerializeField] private float respawnUpVelocity = 10f;
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip platformBounceSfx;
+
     private CharacterController _cc;
     private float _vy;
 
@@ -112,6 +116,10 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
 
         _vy = bounceVelocity;
         _lastSafePos = transform.position;
+
+        // PLAY SOUND HERE
+        if (audioSource != null && platformBounceSfx != null)
+            audioSource.PlayOneShot(platformBounceSfx);
 
         var plat = hit.collider.GetComponent<Platform3D>();
         if (plat != null) plat.OnPlayerBounced();

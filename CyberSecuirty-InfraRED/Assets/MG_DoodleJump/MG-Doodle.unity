@@ -420,6 +420,11 @@ MonoBehaviour:
   dialogueSlider: {fileID: 0}
   mainMixer: {fileID: 24100000, guid: 3c60ee3ca33a91748ba769c3aacf4db0, type: 2}
   exitSceneName: MainGame
+--- !u!82 &535925211 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 8306904633241565544, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
+  m_PrefabInstance: {fileID: 2077712602}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &542958476
 GameObject:
   m_ObjectHideFlags: 0
@@ -2699,12 +2704,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1125070582051602296, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
+      propertyPath: m_Volume
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1125070582051602296, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
       propertyPath: OutputAudioMixerGroup
       value: 
       objectReference: {fileID: -7086826346265011417, guid: 3c60ee3ca33a91748ba769c3aacf4db0, type: 2}
     - target: {fileID: 4426641230627334571, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
       propertyPath: m_Name
       value: Audio Manager
+      objectReference: {fileID: 0}
+    - target: {fileID: 7703501614039284226, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
+      propertyPath: m_Volume
+      value: 0.489
       objectReference: {fileID: 0}
     - target: {fileID: 7703501614039284226, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
       propertyPath: m_Resource
@@ -2714,6 +2727,14 @@ PrefabInstance:
       propertyPath: OutputAudioMixerGroup
       value: 
       objectReference: {fileID: 6660359854331792441, guid: 3c60ee3ca33a91748ba769c3aacf4db0, type: 2}
+    - target: {fileID: 8306904633241565544, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
+      propertyPath: Priority
+      value: 256
+      objectReference: {fileID: 0}
+    - target: {fileID: 8306904633241565544, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
+      propertyPath: m_Volume
+      value: 0.69
+      objectReference: {fileID: 0}
     - target: {fileID: 8306904633241565544, guid: f6056f110232fa4418a69e1722f922f4, type: 3}
       propertyPath: OutputAudioMixerGroup
       value: 
@@ -2747,6 +2768,14 @@ PrefabInstance:
       propertyPath: moveSpeed
       value: 17.7
       objectReference: {fileID: 0}
+    - target: {fileID: 2352234422641780769, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+      propertyPath: audioSource
+      value: 
+      objectReference: {fileID: 535925211}
+    - target: {fileID: 2352234422641780769, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
+      propertyPath: platformBounceSfx
+      value: 
+      objectReference: {fileID: 8300000, guid: 550eb5ca0db1a4249a6fb346f64bc8f9, type: 3}
     - target: {fileID: 6961271934742157308, guid: 3d043f45a1f9af04183593f402f23d15, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
