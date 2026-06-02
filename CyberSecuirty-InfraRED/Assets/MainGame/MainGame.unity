@@ -7294,7 +7294,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857d9699c3eda4548b2d75f62d0a5b94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OTEScript
-  sceneToLoad: MG-Tetris
+  sceneToLoad: MG-Doodle
   lightOnn: {fileID: 2001655955}
   lightOff: {fileID: 495337581}
   lightOnn2: {fileID: 700906043}
@@ -7560,7 +7560,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857d9699c3eda4548b2d75f62d0a5b94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OTEScript
-  sceneToLoad: MG-Doodle
+  sceneToLoad: MG-Tetris
   lightOnn: {fileID: 176032337}
   lightOff: {fileID: 889580513}
   lightOnn2: {fileID: 501906526}
