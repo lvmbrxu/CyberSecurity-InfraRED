@@ -20,6 +20,8 @@ public class ClickToMove : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         agent.speed = moveSpeed;
+        
+        agent.updateRotation = true;
     }
 
     void Update()
