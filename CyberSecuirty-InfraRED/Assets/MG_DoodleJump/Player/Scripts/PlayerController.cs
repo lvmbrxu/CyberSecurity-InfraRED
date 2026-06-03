@@ -1,4 +1,5 @@
 // PlayerController.cs
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -33,6 +34,13 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
     [Header("SFX")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip platformBounceSfx;
+
+    [Header("Bounce Trail")]
+    [SerializeField] private TrailRenderer bounceTrail;
+    [SerializeField] private float trailDuration = 0.15f;
+
+    [Header("Upward Smoke")]
+    [SerializeField] private ParticleSystem upwardSmoke;
 
     private CharacterController _cc;
     private float _vy;
@@ -77,6 +85,21 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
         float g = gravity + (_vy < 0f ? extraFallGravity : 0f);
         _vy -= g * Time.deltaTime;
 
+        // UPWARD SMOKE LOGIC
+        if (upwardSmoke != null)
+        {
+            if (_vy > 0f)
+            {
+                if (!upwardSmoke.isPlaying)
+                    upwardSmoke.Play();
+            }
+            else
+            {
+                if (upwardSmoke.isPlaying)
+                    upwardSmoke.Stop();
+            }
+        }
+
         Vector3 motion = new(_moveX * moveSpeed, _vy, 0f);
         _cc.Move(motion * Time.deltaTime);
 
@@ -117,12 +140,30 @@ public sealed class DoodleJumpPlayer3D_CC : MonoBehaviour
         _vy = bounceVelocity;
         _lastSafePos = transform.position;
 
+        if (bounceTrail != null)
+        {
+            StopCoroutine(nameof(BounceTrailRoutine));
+            StartCoroutine(BounceTrailRoutine());
+        }
+
         // PLAY SOUND HERE
         if (audioSource != null && platformBounceSfx != null)
             audioSource.PlayOneShot(platformBounceSfx);
 
         var plat = hit.collider.GetComponent<Platform3D>();
         if (plat != null) plat.OnPlayerBounced();
+    }
+
+    private IEnumerator BounceTrailRoutine()
+    {
+        if (bounceTrail == null) yield break;
+
+        bounceTrail.Clear();
+        bounceTrail.emitting = true;
+
+        yield return new WaitForSeconds(trailDuration);
+
+        bounceTrail.emitting = false;
     }
 
     public void RecoverFromFall()
