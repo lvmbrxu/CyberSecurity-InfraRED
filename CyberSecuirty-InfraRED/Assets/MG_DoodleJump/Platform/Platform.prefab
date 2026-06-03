@@ -122,6 +122,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 4635515379836692887}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08039bd6935839148a91df180831cb18, type: 3}
+  m_Script: {fileID: 11500000, guid: 0737064d4bdbb3e40b6ac7cfa76775a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlatformStatic3D
+  breaks: 1
+  breakDelay: 0.05

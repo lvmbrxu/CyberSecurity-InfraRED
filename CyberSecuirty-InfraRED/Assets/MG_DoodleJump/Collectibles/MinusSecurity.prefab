@@ -126,3 +126,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InfoCollectible
   securityDelta01: 0.05
+  sfx: {fileID: 0}

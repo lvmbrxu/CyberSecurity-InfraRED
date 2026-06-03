@@ -1,21 +1,30 @@
-// TetrisGameManager.cs
-
-// NEW CHANGES
-// NO scene loading. GameOver/Win just shows UI + freezes.
-// Restart is removed; use the new SceneLoader button for restart if you want.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public sealed class TetrisGameManager : MonoBehaviour
 {
-    [Header("Board")]
-    [Min(1)] public int width = 10;
-    [Min(1)] public int height = 10;
+    [Header("Board Size")]
+    [Min(1)] public int width = 8;
+    [Min(1)] public int height = 8;
 
-    [Header("Grid World (cell centers)")]
-    public Vector3 gridOrigin = new Vector3(-4.5f, -4.5f, 0f);
-    public float cellSize = 1f;
+    [Header("Board Frame Markers (GREEN frame)")]
+    public Transform boardBottomLeft;
+    public Transform boardTopRight;
+    public Transform boardSpace;
+    [Min(0f)] public float boardPadding = 0.05f;
+
+    [Header("Hand Frame Markers (BLUE frame)")]
+    public Transform handBottomLeft;
+    public Transform handTopRight;
+    public Transform handSpace;
+    [Min(0f)] public float handPadding = 0.05f;
+
+    [Header("Hand Background (optional)")]
+    public GameObject handBackgroundPrefab;
+    public float handBackgroundLocalZ = 0.02f;
+
+    [Header("Depth")]
     public float gridZ = 0f;
 
     [Header("Camera")]
@@ -26,68 +35,210 @@ public sealed class TetrisGameManager : MonoBehaviour
     public GameObject placedBlockPrefab;
     public GameObject pieceBlockPrefab;
 
-    [Header("Colors")]
-    public Color[] pieceColors;
-    public Color clueColor = Color.black;
+    [Header("Piece Materials (textures/colors)")]
+    public Material[] pieceMaterials;
 
-    [Header("Spawning")]
-    public Vector3 pieceSpawnOffset = new Vector3(0f, 3.5f, 0f);
+    [Header("Ghost Preview (NEW)")]
+    public Material ghostValidMaterial;
+    public Material ghostInvalidMaterial;
+
+    [Header("Piece Rules")]
     public bool allowRotation = true;
 
-    [Header("Clues (in pieces)")]
-    public int cluesToCollect = 5;
-    [Range(0f, 1f)] public float chancePieceContainsClue = 0.45f;
-    public int maxClueBlocksPerPiece = 1;
+    [Header("Difficulty")]
+    [Range(0f, 1f)] public float solvableHandChance = 0.80f;
+    public bool scaleDifficultyOverTime = true;
+    [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;
+
+    [Header("Scoring")]
+    public int pointsPerBlockPlaced = 8;
+    public int pointsPerLineClear = 180;
+    public int pointsPerCellCleared = 6;
+    public int pointsPerClueCollected = 350;
+    public float comboMultiplierStep = 0.65f;
+
+    [Header("Score Fly Text (updates score only on arrival)")]
+    public GameObject scoreFlyTextPrefab;
+    public RectTransform scoreTargetRect;
+    public Vector2Int scoreFlyFromCell = new Vector2Int(-1, -1);
+
+    [Header("Clues")]
+    public bool enableClues = true;
+    [Range(0f, 1f)] public float clueChancePerPlacedCell = 0.06f;
+    public int cluesTargetToWin = 0;
+    public GameObject clueVisualPrefab;
+    public Vector3 clueLocalOffset = new Vector3(0f, 0.55f, -0.02f);
+    public Vector3 clueLocalScale = Vector3.one * 0.25f;
+
+    [Header("Clear VFX (optional)")]
+    public ParticleSystem clearCellVfxPrefab;
+    public GameObject clearRowVfxPrefab;
+    public GameObject clearColVfxPrefab;
+    [SerializeField] float sweepZOffset = -0.03f;
+
+    [Header("Juice: Camera & Clue Fly")]
+    public CameraShake cameraShake;
+    public Canvas uiCanvas;
+    public GameObject clueFlyIconPrefab;
+
+    [Header("Random Seed (0 = random)")]
     public int seed = 0;
 
     [Header("UI")]
     public UIScript ui;
 
-    // Public access used by PieceView
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip pickupBlockSound;
+    public AudioClip placeBlockSound;
+
     public float CellSize => cellSize;
     public float GridZ => gridZ;
     public Camera Camera => cam;
-    public Vector3 CurrentSpawnWorld => currentSpawnWorld;
 
     bool[,] occ;
-    bool[,] clueOcc;
     GameObject[,] placedVisual;
-
-    PieceView currentPiece;
-    Vector2Int[] currentShape;
-    bool[] currentShapeIsClue;
-    Vector3 currentSpawnWorld;
+    readonly List<PieceView> handPieces = new();
 
     System.Random rng;
-    int cluesFound;
     bool ended;
 
-    Color currentPieceColor;
+    float cellSize;
+    Vector3 boardStartWorld;
+    Transform handBackgroundInstance;
 
-    static readonly int ColorId = Shader.PropertyToID("_BaseColor");
-    static readonly int ColorIdAlt = Shader.PropertyToID("_Color");
+    int score;
+    int pendingScore;
+    int combo;
+    int cluesFound;
 
     void Awake()
     {
         if (!cam) cam = Camera.main;
         rng = (seed == 0) ? new System.Random() : new System.Random(seed);
 
+        if (!audioSource)
+            audioSource = GetComponent<AudioSource>();
+
+        if (!boardSpace && boardBottomLeft) boardSpace = boardBottomLeft.parent;
+        if (!handSpace && handBottomLeft) handSpace = handBottomLeft.parent;
+
         occ = new bool[width, height];
-        clueOcc = new bool[width, height];
         placedVisual = new GameObject[width, height];
 
+        RecalculateBoardLayout();
         BuildGridVisuals();
-        SpawnNextPieceOrGameOver();
+        EnsureHandBackground();
+
+        score = 0;
+        pendingScore = 0;
+        combo = 1;
+        cluesFound = 0;
+
+        ui?.SetScore(score);
+        ui?.SetCombo(combo);
+        ui?.SetClues(cluesFound, cluesTargetToWin);
+
+        DealNewHandOrGameOver();
+    }
+
+    public void PlayPickupSound()
+    {
+        if (audioSource && pickupBlockSound)
+            audioSource.PlayOneShot(pickupBlockSound);
+    }
+
+    public void PlayPlaceSound()
+    {
+        if (audioSource && placeBlockSound)
+            audioSource.PlayOneShot(placeBlockSound);
+    }
+
+    void RecalculateBoardLayout()
+    {
+        if (!boardBottomLeft || !boardTopRight || !boardSpace)
+        {
+            Debug.LogError("Board markers/space missing. Assign BoardBottomLeft, BoardTopRight, and BoardSpace.");
+            return;
+        }
+
+        Vector3 blL = boardSpace.InverseTransformPoint(boardBottomLeft.position);
+        Vector3 trL = boardSpace.InverseTransformPoint(boardTopRight.position);
+
+        float minX = Mathf.Min(blL.x, trL.x) + boardPadding;
+        float maxX = Mathf.Max(blL.x, trL.x) - boardPadding;
+        float minY = Mathf.Min(blL.y, trL.y) + boardPadding;
+        float maxY = Mathf.Max(blL.y, trL.y) - boardPadding;
+
+        float usableW = maxX - minX;
+        float usableH = maxY - minY;
+        if (usableW <= 0f || usableH <= 0f)
+        {
+            Debug.LogError("Board usable area invalid. Check markers/padding.");
+            return;
+        }
+
+        cellSize = Mathf.Min(usableW / width, usableH / height);
+
+        float usedW = cellSize * width;
+        float usedH = cellSize * height;
+
+        float offsetX = (usableW - usedW) * 0.5f;
+        float offsetY = (usableH - usedH) * 0.5f;
+
+        Vector3 cell00Local = new Vector3(
+            minX + offsetX + cellSize * 0.5f,
+            minY + offsetY + cellSize * 0.5f,
+            0f
+        );
+
+        boardStartWorld = boardSpace.TransformPoint(cell00Local);
+        boardStartWorld.z = gridZ;
+    }
+
+    void EnsureHandBackground()
+    {
+        if (!handBackgroundPrefab || !handBottomLeft || !handTopRight || !handSpace)
+            return;
+
+        if (handBackgroundInstance)
+            return;
+
+        var go = Instantiate(handBackgroundPrefab, handSpace);
+        go.name = "HandBackground";
+        handBackgroundInstance = go.transform;
+
+        Vector3 blL = handSpace.InverseTransformPoint(handBottomLeft.position);
+        Vector3 trL = handSpace.InverseTransformPoint(handTopRight.position);
+
+        float minX = Mathf.Min(blL.x, trL.x) + handPadding;
+        float maxX = Mathf.Max(blL.x, trL.x) - handPadding;
+        float minY = Mathf.Min(blL.y, trL.y) + handPadding;
+        float maxY = Mathf.Max(blL.y, trL.y) - handPadding;
+
+        float w = Mathf.Max(0.0001f, maxX - minX);
+        float h = Mathf.Max(0.0001f, maxY - minY);
+
+        Vector3 center = new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, -handBackgroundLocalZ);
+        handBackgroundInstance.localPosition = center;
+        handBackgroundInstance.localRotation = Quaternion.identity;
+        handBackgroundInstance.localScale = new Vector3(w, h, 1f);
     }
 
     public Vector3 GridToWorld(Vector2Int g)
-        => new Vector3(gridOrigin.x + g.x * cellSize, gridOrigin.y + g.y * cellSize, gridZ);
+    {
+        return new Vector3(
+            boardStartWorld.x + g.x * cellSize,
+            boardStartWorld.y + g.y * cellSize,
+            gridZ
+        );
+    }
 
     public Vector2Int WorldToGrid(Vector3 w)
     {
-        float lx = (w.x - gridOrigin.x) / cellSize;
-        float ly = (w.y - gridOrigin.y) / cellSize;
-        return new Vector2Int(Mathf.FloorToInt(lx + 0.5f), Mathf.FloorToInt(ly + 0.5f));
+        float lx = (w.x - boardStartWorld.x) / cellSize;
+        float ly = (w.y - boardStartWorld.y) / cellSize;
+        return new Vector2Int(Mathf.RoundToInt(lx), Mathf.RoundToInt(ly));
     }
 
     bool Inside(int x, int y) => x >= 0 && x < width && y >= 0 && y < height;
@@ -117,63 +268,159 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             var go = Instantiate(gridCellPrefab, GridToWorld(new Vector2Int(x, y)), Quaternion.identity, transform);
             go.name = $"Grid_{x}_{y}";
+            go.transform.localScale = Vector3.one * cellSize;
         }
     }
 
-    void SpawnNextPieceOrGameOver()
+    void DealNewHandOrGameOver()
     {
         if (ended) return;
 
-        currentShape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
-        currentShapeIsClue = BuildClueMaskForShape(currentShape);
+        for (int i = 0; i < handPieces.Count; i++)
+            if (handPieces[i]) Destroy(handPieces[i].gameObject);
+        handPieces.Clear();
 
-        Vector3 topCenter = GridToWorld(new Vector2Int(width / 2, height - 1));
-        currentSpawnWorld = topCenter + pieceSpawnOffset;
-        currentSpawnWorld.z = gridZ;
+        float chance = solvableHandChance;
+        if (scaleDifficultyOverTime)
+            chance = Mathf.Lerp(solvableHandChance, minSolvableChanceLate, GetFilledRatio());
 
-        if (!AnyPlacementExists_Bounded(currentShape))
+        bool wantSolvable = rng.NextDouble() < chance;
+
+        SolvableHandGenerator.HandPiece[] hand;
+        if (wantSolvable)
         {
+            if (!SolvableHandGenerator.TryGenerateHand(
+                    width, height,
+                    (x, y) => occ[x, y],
+                    rng,
+                    allowRotation,
+                    out hand))
+            {
+                hand = GenerateRandomHand();
+            }
+        }
+        else
+        {
+            hand = GenerateRandomHand();
+        }
+
+        Vector3[] spawnPoints = GetHandSpawnPointsWorld();
+        for (int i = 0; i < 3; i++)
+        {
+            var root = new GameObject($"HandPiece_{i}");
+            root.transform.position = spawnPoints[i];
+
+            var pv = root.AddComponent<PieceView>();
+            pv.Init(this, hand[i].shape, pieceBlockPrefab, PickMaterial(), spawnPoints[i]);
+            handPieces.Add(pv);
+        }
+
+        if (!AnyHandPiecePlaceable())
             GameOver_NoSpace();
-            return;
-        }
-
-        if (currentPiece) Destroy(currentPiece.gameObject);
-
-        currentPieceColor = PickPieceColor();
-
-        var root = new GameObject("CurrentPiece");
-        root.transform.position = currentSpawnWorld;
-        root.transform.localScale = Vector3.one;
-
-        currentPiece = root.AddComponent<PieceView>();
-        currentPiece.Init(this, currentShape, currentShapeIsClue, pieceBlockPrefab, currentPieceColor, clueColor);
     }
 
-    Color PickPieceColor()
+    Vector3[] GetHandSpawnPointsWorld()
     {
-        if (pieceColors == null || pieceColors.Length == 0) return Color.white;
-        return pieceColors[rng.Next(0, pieceColors.Length)];
-    }
+        Vector3[] result = new Vector3[3];
 
-    bool[] BuildClueMaskForShape(Vector2Int[] shape)
-    {
-        var mask = new bool[shape.Length];
-        if (rng.NextDouble() > chancePieceContainsClue) return mask;
-
-        int n = Mathf.Clamp(maxClueBlocksPerPiece, 1, shape.Length);
-        int count = rng.Next(1, n + 1);
-
-        var indices = new List<int>(shape.Length);
-        for (int i = 0; i < shape.Length; i++) indices.Add(i);
-
-        for (int i = 0; i < count; i++)
+        if (!handBottomLeft || !handTopRight || !handSpace)
         {
-            int j = rng.Next(i, indices.Count);
-            (indices[i], indices[j]) = (indices[j], indices[i]);
-            mask[indices[i]] = true;
+            Debug.LogError("Hand markers/space missing. Assign HandBottomLeft, HandTopRight, and HandSpace.");
+            return result;
         }
 
-        return mask;
+        Vector3 blL = handSpace.InverseTransformPoint(handBottomLeft.position);
+        Vector3 trL = handSpace.InverseTransformPoint(handTopRight.position);
+
+        float minX = Mathf.Min(blL.x, trL.x) + handPadding;
+        float maxX = Mathf.Max(blL.x, trL.x) - handPadding;
+        float minY = Mathf.Min(blL.y, trL.y) + handPadding;
+        float maxY = Mathf.Max(blL.y, trL.y) - handPadding;
+
+        float y = (minY + maxY) * 0.5f;
+
+        Vector3 p0L = new Vector3(Mathf.Lerp(minX, maxX, 0.2f), y, 0f);
+        Vector3 p1L = new Vector3(Mathf.Lerp(minX, maxX, 0.5f), y, 0f);
+        Vector3 p2L = new Vector3(Mathf.Lerp(minX, maxX, 0.8f), y, 0f);
+
+        result[0] = handSpace.TransformPoint(p0L);
+        result[1] = handSpace.TransformPoint(p1L);
+        result[2] = handSpace.TransformPoint(p2L);
+
+        result[0].z = gridZ;
+        result[1].z = gridZ;
+        result[2].z = gridZ;
+
+        return result;
+    }
+
+    SolvableHandGenerator.HandPiece[] GenerateRandomHand()
+    {
+        var h = new SolvableHandGenerator.HandPiece[3];
+        for (int i = 0; i < 3; i++)
+        {
+            var shape = BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
+            h[i] = new SolvableHandGenerator.HandPiece { shape = shape, rotation = 0 };
+        }
+        return h;
+    }
+
+    float GetFilledRatio()
+    {
+        int filled = 0;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            if (occ[x, y]) filled++;
+
+        int total = width * height;
+        return total == 0 ? 0f : (float)filled / total;
+    }
+
+    Material PickMaterial()
+    {
+        if (pieceMaterials == null || pieceMaterials.Length == 0) return null;
+        return pieceMaterials[rng.Next(0, pieceMaterials.Length)];
+    }
+
+    public bool CanPlacePublic(Vector2Int[] shape, Vector2Int anchor)
+    {
+        for (int i = 0; i < shape.Length; i++)
+        {
+            int x = anchor.x + shape[i].x;
+            int y = anchor.y + shape[i].y;
+            if (x < 0 || x >= width || y < 0 || y >= height) return false;
+            if (occ[x, y]) return false;
+        }
+        return true;
+    }
+
+    Vector3 ScoreFlyOrigin()
+    {
+        if (scoreFlyFromCell.x >= 0 && scoreFlyFromCell.y >= 0 &&
+            scoreFlyFromCell.x < width && scoreFlyFromCell.y < height)
+            return GridToWorld(scoreFlyFromCell);
+
+        return GridToWorld(new Vector2Int(width / 2, height / 2));
+    }
+
+    Vector3 ComputeShapeWorldCenter(Vector2Int anchor, Vector2Int[] shape)
+    {
+        Vector3 sum = Vector3.zero;
+        for (int i = 0; i < shape.Length; i++)
+            sum += GridToWorld(new Vector2Int(anchor.x + shape[i].x, anchor.y + shape[i].y));
+        return sum / Mathf.Max(1, shape.Length);
+    }
+
+    bool AnyHandPiecePlaceable()
+    {
+        for (int i = 0; i < handPieces.Count; i++)
+        {
+            var p = handPieces[i];
+            if (!p) continue;
+            if (AnyPlacementExists_Bounded(p.Shape))
+                return true;
+        }
+        return false;
     }
 
     bool AnyPlacementExists_Bounded(Vector2Int[] shape)
@@ -194,54 +441,93 @@ public sealed class TetrisGameManager : MonoBehaviour
         int endX = (width - 1) - maxX;
         int startY = -minY;
         int endY = (height - 1) - maxY;
-
         if (startX > endX || startY > endY) return false;
 
         for (int y = startY; y <= endY; y++)
         for (int x = startX; x <= endX; x++)
-            if (CanPlace(shape, new Vector2Int(x, y)))
+            if (CanPlacePublic(shape, new Vector2Int(x, y)))
                 return true;
 
         return false;
     }
 
-    bool CanPlace(Vector2Int[] shape, Vector2Int anchor)
-    {
-        for (int i = 0; i < shape.Length; i++)
-        {
-            int x = anchor.x + shape[i].x;
-            int y = anchor.y + shape[i].y;
-            if (!Inside(x, y)) return false;
-            if (occ[x, y]) return false;
-        }
-        return true;
-    }
-
-    public bool TryPlaceCurrentPieceAtAnchor(Vector2Int anchor)
+    public bool TryPlacePieceAtAnchor(PieceView piece, Vector2Int anchor)
     {
         if (ended) return false;
-        if (!currentPiece) return false;
+        if (!piece) return false;
 
-        if (!CanPlace(currentShape, anchor))
-            return false;
+        var shape = piece.Shape;
+        if (shape == null || shape.Length == 0) return false;
+        if (!CanPlacePublic(shape, anchor)) return false;
 
-        CommitPlacement(currentShape, currentShapeIsClue, anchor);
-        ClearLinesAndAwardClues();
+        int placementGain = pointsPerBlockPlaced * shape.Length;
+        SpawnScoreFly(ComputeShapeWorldCenter(anchor, shape), placementGain);
 
-        if (!ended && cluesFound >= cluesToCollect)
+        CommitPlacement(shape, anchor, piece.PieceMaterial);
+        PlayPlaceSound();
+
+        int clearedLines, clearedCells;
+        int baseClearGain = ClearLines(out clearedLines, out clearedCells);
+
+        if (clearedLines > 0)
         {
-            ended = true;
-            Debug.Log("introduce password");
-            if (ui) ui.ShowWin();
-            else Time.timeScale = 0f;
-            return true;
+            combo = Mathf.Max(2, combo + 1);
+            ui?.SetCombo(combo);
+
+            float mult = 1f + (combo - 1) * comboMultiplierStep;
+            int finalClearGain = Mathf.RoundToInt(baseClearGain * mult);
+
+            SpawnScoreFly(ScoreFlyOrigin(), finalClearGain);
+
+            if (cameraShake)
+            {
+                float strengthMul = 1f + 0.35f * (clearedLines - 1) + 0.02f * clearedCells;
+                float durationMul = 1f + 0.15f * (clearedLines - 1);
+                cameraShake.Kick(strengthMul, durationMul);
+            }
+        }
+        else
+        {
+            combo = 1;
+            ui?.SetCombo(combo);
         }
 
-        SpawnNextPieceOrGameOver();
+        handPieces.Remove(piece);
+        Destroy(piece.gameObject);
+
+        if (handPieces.Count == 0)
+            DealNewHandOrGameOver();
+        else if (!AnyHandPiecePlaceable())
+            GameOver_NoSpace();
+
         return true;
     }
 
-    void CommitPlacement(Vector2Int[] shape, bool[] isClue, Vector2Int anchor)
+    void SpawnScoreFly(Vector3 worldPos, int amount)
+    {
+        if (!uiCanvas || !scoreFlyTextPrefab || !scoreTargetRect) return;
+
+        var go = Instantiate(scoreFlyTextPrefab, uiCanvas.transform);
+        var fly = go.GetComponent<ScoreFlyToUI>();
+        if (!fly) { Destroy(go); return; }
+
+        pendingScore += amount;
+
+        fly.canvas = uiCanvas;
+        fly.uiTarget = scoreTargetRect;
+        fly.worldCamera = cam ? cam : Camera.main;
+
+        fly.OnArrive = () =>
+        {
+            pendingScore -= amount;
+            score += amount;
+            ui?.SetScore(score);
+        };
+
+        fly.Init(worldPos, $"+{amount}");
+    }
+
+    void CommitPlacement(Vector2Int[] shape, Vector2Int anchor, Material mat)
     {
         for (int i = 0; i < shape.Length; i++)
         {
@@ -249,26 +535,45 @@ public sealed class TetrisGameManager : MonoBehaviour
             int y = anchor.y + shape[i].y;
 
             occ[x, y] = true;
-            clueOcc[x, y] = isClue[i];
 
-            if (placedBlockPrefab)
+            if (!placedBlockPrefab) continue;
+
+            var pos = GridToWorld(new Vector2Int(x, y));
+            var go = Instantiate(placedBlockPrefab, pos, Quaternion.identity, transform);
+            go.name = $"Placed_{x}_{y}";
+            go.transform.localScale = Vector3.one * cellSize;
+            placedVisual[x, y] = go;
+
+            ApplyMaterial(go, mat);
+
+            var data = go.GetComponent<PlacedCellData>();
+            if (!data) data = go.AddComponent<PlacedCellData>();
+
+            if (enableClues && clueVisualPrefab && rng.NextDouble() < clueChancePerPlacedCell)
             {
-                var pos = GridToWorld(new Vector2Int(x, y));
-                pos.z = gridZ;
-
-                var go = Instantiate(placedBlockPrefab, pos, Quaternion.identity, transform);
-                go.name = $"Placed_{x}_{y}";
-                placedVisual[x, y] = go;
-
-                ApplyColor(go, isClue[i] ? clueColor : currentPieceColor);
+                data.hasClue = true;
+                var clue = Instantiate(clueVisualPrefab, go.transform);
+                clue.name = "ClueVisual";
+                clue.transform.localPosition = clueLocalOffset * cellSize;
+                clue.transform.localRotation = Quaternion.identity;
+                clue.transform.localScale = clueLocalScale;
+                data.clueVisual = clue.transform;
+            }
+            else
+            {
+                data.hasClue = false;
+                data.clueVisual = null;
             }
         }
     }
 
-    void ClearLinesAndAwardClues()
+    int ClearLines(out int clearedLines, out int clearedCells)
     {
-        var fullRows = new List<int>();
-        var fullCols = new List<int>();
+        clearedLines = 0;
+        clearedCells = 0;
+
+        var fullRows = new List<int>(4);
+        var fullCols = new List<int>(4);
 
         for (int y = 0; y < height; y++)
         {
@@ -287,57 +592,135 @@ public sealed class TetrisGameManager : MonoBehaviour
         }
 
         if (fullRows.Count == 0 && fullCols.Count == 0)
-            return;
+            return 0;
+
+        for (int i = 0; i < fullRows.Count; i++) SpawnRowClearVfx(fullRows[i]);
+        for (int i = 0; i < fullCols.Count; i++) SpawnColClearVfx(fullCols[i]);
 
         for (int i = 0; i < fullRows.Count; i++)
         {
             int y = fullRows[i];
             for (int x = 0; x < width; x++)
-                ClearCell(x, y);
+                ClearCell(x, y, ref clearedCells);
         }
 
         for (int i = 0; i < fullCols.Count; i++)
         {
             int x = fullCols[i];
             for (int y = 0; y < height; y++)
-                ClearCell(x, y);
+                ClearCell(x, y, ref clearedCells);
         }
+
+        clearedLines = fullRows.Count + fullCols.Count;
+        return clearedLines * pointsPerLineClear + clearedCells * pointsPerCellCleared;
     }
 
-    void ClearCell(int x, int y)
+    void ClearCell(int x, int y, ref int clearedCells)
     {
         if (!occ[x, y]) return;
 
-        if (clueOcc[x, y])
-        {
-            clueOcc[x, y] = false;
-            cluesFound++;
-            Debug.Log(cluesFound.ToString()); // 1..5
-        }
+        SpawnCellClearVfx(new Vector2Int(x, y));
 
         occ[x, y] = false;
+        clearedCells++;
 
-        if (placedVisual[x, y])
+        var go = placedVisual[x, y];
+        if (go)
         {
-            Destroy(placedVisual[x, y]);
+            var data = go.GetComponent<PlacedCellData>();
+            if (enableClues && data && data.hasClue)
+                TrySpawnClueFly(GridToWorld(new Vector2Int(x, y)));
+
+            Destroy(go);
             placedVisual[x, y] = null;
         }
     }
 
-    void ApplyColor(GameObject go, Color c)
+    void SpawnCellClearVfx(Vector2Int cell)
     {
+        if (!clearCellVfxPrefab) return;
+
+        var pos = GridToWorld(cell);
+        var fx = Instantiate(clearCellVfxPrefab, pos, Quaternion.identity);
+        fx.transform.localScale = Vector3.one * cellSize;
+
+        var main = fx.main;
+        Destroy(fx.gameObject, main.duration + main.startLifetime.constantMax + 0.25f);
+    }
+
+    void SpawnRowClearVfx(int y)
+    {
+        if (!clearRowVfxPrefab) return;
+
+        Vector3 left = GridToWorld(new Vector2Int(0, y));
+        Vector3 right = GridToWorld(new Vector2Int(width - 1, y));
+        Vector3 center = (left + right) * 0.5f;
+        center.z += sweepZOffset;
+
+        var go = Instantiate(clearRowVfxPrefab, center, Quaternion.identity);
+        go.transform.localScale = new Vector3(width * cellSize, cellSize * 0.6f, 1f);
+        Destroy(go, 2f);
+    }
+
+    void SpawnColClearVfx(int x)
+    {
+        if (!clearColVfxPrefab) return;
+
+        Vector3 bottom = GridToWorld(new Vector2Int(x, 0));
+        Vector3 top = GridToWorld(new Vector2Int(x, height - 1));
+        Vector3 center = (bottom + top) * 0.5f;
+        center.z += sweepZOffset;
+
+        var go = Instantiate(clearColVfxPrefab, center, Quaternion.identity);
+        go.transform.localScale = new Vector3(cellSize * 0.6f, height * cellSize, 1f);
+        Destroy(go, 2f);
+    }
+
+    void TrySpawnClueFly(Vector3 worldPos)
+    {
+        if (!ui || !uiCanvas || !clueFlyIconPrefab) return;
+        if (!ui.cluesTargetRect) return;
+
+        var go = Instantiate(clueFlyIconPrefab, uiCanvas.transform);
+        var fly = go.GetComponent<ClueFlyToUI>();
+        if (!fly) { Destroy(go); return; }
+
+        fly.canvas = uiCanvas;
+        fly.uiTarget = ui.cluesTargetRect;
+        fly.worldCamera = cam ? cam : Camera.main;
+        fly.OnArrive = OnClueArrived;
+        fly.Init(worldPos);
+    }
+
+    void OnClueArrived()
+    {
+        if (!enableClues) return;
+
+        cluesFound++;
+        ui?.SetClues(cluesFound, cluesTargetToWin);
+
+        SpawnScoreFly(ScoreFlyOrigin(), pointsPerClueCollected);
+
+        if (cluesTargetToWin > 0 && cluesFound >= cluesTargetToWin)
+            Win();
+    }
+
+    static void ApplyMaterial(GameObject go, Material mat)
+    {
+        if (!mat) return;
         var r = go.GetComponentInChildren<Renderer>();
         if (!r) return;
+        r.sharedMaterial = mat;
+    }
 
-        var mpb = new MaterialPropertyBlock();
-        r.GetPropertyBlock(mpb);
+    void Win()
+    {
+        if (ended) return;
+        ended = true;
 
-        if (r.sharedMaterial && r.sharedMaterial.HasProperty(ColorId))
-            mpb.SetColor(ColorId, c);
-        else
-            mpb.SetColor(ColorIdAlt, c);
-
-        r.SetPropertyBlock(mpb);
+        int final = score + pendingScore;
+        if (ui) ui.ShowWin(final);
+        else Time.timeScale = 0f;
     }
 
     void GameOver_NoSpace()
@@ -345,16 +728,8 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (ended) return;
         ended = true;
 
-        if (ui) ui.ShowGameOver();
+        int final = score + pendingScore;
+        if (ui) ui.ShowGameOver(final);
         else Time.timeScale = 0f;
-    }
-
-    // Call this from your Continue button if you want gameplay to resume
-    public void ContinueGameplay()
-    {
-        ended = false;
-        Time.timeScale = 1f;
-        // If you want to keep playing after win:
-        // SpawnNextPieceOrGameOver();
     }
 }

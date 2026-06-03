@@ -64,7 +64,7 @@ public class NPCInteract : MonoBehaviour
                 if (lostTimer >= returnDelay)
                 {
                     currentState = State.Patrol;
-                    agent.isStopped = true;
+                    agent.isStopped = false;
                     GoToNextWaypoint();
                 }
                 break;
