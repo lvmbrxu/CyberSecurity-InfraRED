@@ -1,30 +1,27 @@
-using TMPro;
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
 {
+    public event Action OnSlotChanged;
+
     [Header("Slot")]
     [SerializeField] private PasswordClueType acceptedType;
 
-    [Header("UI")]
-    [SerializeField] private TMP_Text valueText;
-    [SerializeField] private Image highlightImage;
-
     [Header("Highlight")]
-    [SerializeField] private float hoverAlpha = 0.2f;
+    [SerializeField] private Image highlightImage;
+    [SerializeField] private float hoverAlpha = 0.18f;
 
     private DraggableClueCard currentCard;
 
     public string CurrentValue => currentCard != null ? currentCard.PasswordValue : "";
+    public bool HasValue => currentCard != null;
 
     private void Awake()
     {
         SetHighlight(0f);
-
-        if (valueText != null)
-            valueText.text = "";
     }
 
     public void OnDrop(PointerEventData eventData)
@@ -42,27 +39,25 @@ public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnte
             return;
         }
 
+        ClearSlot();
+
         currentCard = card;
+        currentCard.MarkAcceptedBySlot();
+        currentCard.HideInSlot();
 
-        if (valueText != null)
-            valueText.text = card.PasswordValue;
-
-        card.gameObject.SetActive(false);
         SetHighlight(0f);
+        OnSlotChanged?.Invoke();
     }
 
     public void ClearSlot()
     {
         if (currentCard != null)
         {
-            currentCard.gameObject.SetActive(true);
             currentCard.ReturnToLibrary();
+            currentCard = null;
         }
 
-        currentCard = null;
-
-        if (valueText != null)
-            valueText.text = "";
+        OnSlotChanged?.Invoke();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
