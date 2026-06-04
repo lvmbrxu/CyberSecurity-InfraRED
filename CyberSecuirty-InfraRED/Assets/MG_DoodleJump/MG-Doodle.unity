@@ -7403,10 +7403,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
-        m_MethodName: LoadByBuildIndex
-        m_Mode: 3
+      - m_Target: {fileID: 1788614635}
+        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+        m_MethodName: Restart
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -7681,10 +7681,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
-        m_MethodName: LoadByBuildIndex
-        m_Mode: 3
+      - m_Target: {fileID: 1788614642}
+        m_TargetAssemblyTypeName: MinigameFinish, Assembly-CSharp
+        m_MethodName: FinishMinigame
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -7713,11 +7713,11 @@ GameObject:
   - component: {fileID: 1788614635}
   - component: {fileID: 1788614634}
   - component: {fileID: 1788614637}
-  - component: {fileID: 1788614638}
   - component: {fileID: 1788614639}
   - component: {fileID: 1788614640}
   - component: {fileID: 1788614641}
   - component: {fileID: 1788614642}
+  - component: {fileID: 1788614643}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -7834,20 +7834,6 @@ MonoBehaviour:
   spawnStartPlatform: 0
   startYOffset: 1.2
   startXJitter: 0.8
---- !u!114 &1788614638
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1788614633}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3829038c476224c47b989dc730689d8b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
-  mainMenuBuildIndex: 0
-  nextBuildIndex: 4
 --- !u!114 &1788614639
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7914,7 +7900,21 @@ MonoBehaviour:
   minigameId: DoodleJump
   mainSceneBuildIndex: 4
   returnSpawnId: FromDoodleJump
-  mainEventId: cutscene_after_minigame1
+  mainEventId: cutscene_after_DoodleJump
+--- !u!114 &1788614643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1788614633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3829038c476224c47b989dc730689d8b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
+  mainMenuBuildIndex: 0
+  nextBuildIndex: -1
 --- !u!1 &1897334892 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7176349073278257090, guid: b0bb39617a50c1543aad64c64ce068ea, type: 3}
@@ -8675,7 +8675,15 @@ PrefabInstance:
     - target: {fileID: 1501128046678364872, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1788614638}
+      objectReference: {fileID: 1788614643}
+    - target: {fileID: 1501128046678364872, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: LoadByBuildIndex
+      objectReference: {fileID: 0}
+    - target: {fileID: 1501128046678364872, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_IntArgument
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 1852499178341704536, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
       propertyPath: m_Name
       value: LosePanel
@@ -8683,7 +8691,7 @@ PrefabInstance:
     - target: {fileID: 4915913925980066989, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1788614638}
+      objectReference: {fileID: 0}
     - target: {fileID: 5976455035982550708, guid: 45268ef045f8fd24eb09a3fa02249837, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -8904,7 +8912,7 @@ PrefabInstance:
     - target: {fileID: 7718102042340807177, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1788614638}
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 1307199600129850692, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
     m_RemovedGameObjects:

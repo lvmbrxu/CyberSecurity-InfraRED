@@ -298,6 +298,22 @@ PrefabInstance:
     - target: {fileID: 278141676075752933, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_TargetGraphic
       value: 
+      objectReference: {fileID: 520743740}
+    - target: {fileID: 278141676075752933, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 278141676075752933, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1247089676}
+    - target: {fileID: 278141676075752933, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: FinishMinigame
+      objectReference: {fileID: 0}
+    - target: {fileID: 278141676075752933, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: MinigameFinish, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 624140732550797567, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -337,7 +353,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1711040300657555594, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1982053038256291576, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_Color.a
@@ -494,7 +510,7 @@ PrefabInstance:
     - target: {fileID: 7718102042340807177, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1247089675}
+      objectReference: {fileID: 0}
     - target: {fileID: 7718102042340807177, guid: d1fe01a7934918e4c92738e706daf806, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: RestartCurrent
@@ -1321,14 +1337,14 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1247089675}
         m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
         m_MethodName: LoadByBuildIndex
         m_Mode: 3
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
+          m_IntArgument: 4
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
@@ -1609,7 +1625,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Continue
+  m_text: Return
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9d33f1594ffbd0f489da8135abde862b, type: 2}
   m_sharedMaterial: {fileID: -2458981005690558498, guid: 9d33f1594ffbd0f489da8135abde862b, type: 2}
@@ -2051,10 +2067,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1247089675}
         m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
-        m_MethodName: LoadByBuildIndex
-        m_Mode: 3
+        m_MethodName: RestartCurrent
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3039,6 +3055,7 @@ GameObject:
   - component: {fileID: 1247089673}
   - component: {fileID: 1247089672}
   - component: {fileID: 1247089674}
+  - component: {fileID: 1247089676}
   - component: {fileID: 1247089675}
   m_Layer: 0
   m_Name: GameManager
@@ -3164,8 +3181,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829038c476224c47b989dc730689d8b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
-  mainMenuBuildIndex: 4
-  nextBuildIndex: 3
+  mainMenuBuildIndex: 0
+  nextBuildIndex: -1
+--- !u!114 &1247089676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1247089671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7961ee71475a6dc43b36a9ae70bd8e8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MinigameFinish
+  minigameId: Blocks
+  mainSceneBuildIndex: 4
+  returnSpawnId: FromBlocks
+  mainEventId: cutscene_after_Blocks
 --- !u!1001 &1370538579
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3713,10 +3746,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1247089675}
         m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
-        m_MethodName: LoadByBuildIndex
-        m_Mode: 3
+        m_MethodName: RestartCurrent
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

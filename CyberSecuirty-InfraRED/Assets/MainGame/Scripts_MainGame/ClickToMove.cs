@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
+using Unity.Cinemachine;
 
 public class ClickToMove : MonoBehaviour
 {
