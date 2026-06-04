@@ -2,55 +2,52 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Generates a 3-piece hand that is solvable in some order,
-/// simulating line clears after each placement (Block Blast feel).
-/// </summary>
 public static class SolvableHandGenerator
 {
-    private const int MaxAttempts = 250;
+    private const int MaxAttempts = 450;
 
     public struct HandPiece
     {
         public Vector2Int[] shape;
-        public int rotation; // debug only
+        public int rotation; // not used (kept for compatibility)
     }
 
     public static bool TryGenerateHand(
         int boardW, int boardH,
-        Func<int, int, bool> isOccupied,     // (x,y) => true if filled
+        Func<int, int, bool> isOccupied,
         System.Random rng,
         bool allowRotation,
         out HandPiece[] hand)
     {
         hand = null;
 
-        // Snapshot occupancy into mutable grid
         bool[,] occ = new bool[boardW, boardH];
-        int empty = 0;
+        int filled = 0;
         for (int y = 0; y < boardH; y++)
         for (int x = 0; x < boardW; x++)
         {
             occ[x, y] = isOccupied(x, y);
-            if (!occ[x, y]) empty++;
+            if (occ[x, y]) filled++;
         }
 
-        if (empty == 0) return false;
+        if (filled >= boardW * boardH) return false;
 
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
             var cand = new HandPiece[3];
 
+            // Block Blast feel: ensure at least one "small helper" piece
+            int smallSlot = rng.Next(0, 3);
+
             for (int i = 0; i < 3; i++)
             {
-                int rot = allowRotation ? rng.Next(0, 4) : 0;
-                var baseShape = BlockBlastShapeLibrary.Shapes[rng.Next(0, BlockBlastShapeLibrary.Shapes.Length)];
-                var shape = allowRotation ? RotateAndNormalize(baseShape, rot) : baseShape;
+                Vector2Int[] shape = (i == smallSlot)
+                    ? GetSmallHelper(rng)                   // explicit small pool
+                    : BlockBlastShapeLibrary.GetRandom(rng, allowRotation);
 
-                cand[i] = new HandPiece { shape = shape, rotation = rot };
+                cand[i] = new HandPiece { shape = shape, rotation = 0 };
             }
 
-            // IMPORTANT: lookahead with clears
             if (ExistsAnyOrderPlacement_WithClears((bool[,])occ.Clone(), cand))
             {
                 hand = cand;
@@ -61,32 +58,29 @@ public static class SolvableHandGenerator
         return false;
     }
 
-    private static Vector2Int[] RotateAndNormalize(Vector2Int[] baseShape, int rot)
+    // Small helpers: 1x1, 1x2 (both), 1x3 (both), 3-block L
+    // These MUST exist in your BlockBlastShapeLibrary to match shapes.
+    static Vector2Int[] GetSmallHelper(System.Random rng)
     {
-        var dst = new Vector2Int[baseShape.Length];
-        for (int i = 0; i < baseShape.Length; i++)
+        // Explicitly list the helper shapes in normalized forms.
+        // (These match the shapes we included in the "no rotate" library.)
+        Vector2Int[][] helpers =
         {
-            var p = baseShape[i];
-            for (int r = 0; r < (rot & 3); r++)
-                p = new Vector2Int(p.y, -p.x); // 90 CW
-            dst[i] = p;
-        }
+            new []{ new Vector2Int(0,0) }, // 1x1
 
-        int minX = int.MaxValue, minY = int.MaxValue;
-        for (int i = 0; i < dst.Length; i++)
-        {
-            minX = Mathf.Min(minX, dst[i].x);
-            minY = Mathf.Min(minY, dst[i].y);
-        }
+            new []{ new Vector2Int(0,0), new Vector2Int(1,0) }, // 1x2 horizontal
+            new []{ new Vector2Int(0,0), new Vector2Int(0,1) }, // 1x2 vertical
 
-        var norm = new Vector2Int[dst.Length];
-        for (int i = 0; i < dst.Length; i++)
-            norm[i] = new Vector2Int(dst[i].x - minX, dst[i].y - minY);
+            new []{ new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(2,0) }, // 1x3 horizontal
+            new []{ new Vector2Int(0,0), new Vector2Int(0,1), new Vector2Int(0,2) }, // 1x3 vertical
 
-        return norm;
+            new []{ new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(0,1) }, // L3
+        };
+
+        return helpers[rng.Next(0, helpers.Length)];
     }
 
-    // ---------- NEW: lookahead solver with clears ----------
+    // ---------- Lookahead solver with clears (depth 3) ----------
     private static bool ExistsAnyOrderPlacement_WithClears(bool[,] occOriginal, HandPiece[] hand)
     {
         int[] idx = { 0, 1, 2 };
@@ -113,28 +107,23 @@ public static class SolvableHandGenerator
         int w = occ.GetLength(0);
         int h = occ.GetLength(1);
 
-        // Try every anchor position
         for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++)
         {
             if (!CanPlaceAt(occ, x, y, shape))
                 continue;
 
-            // Apply piece
-            var touched = new List<Vector2Int>(shape.Length);
-            ApplyAt(occ, x, y, shape, true, touched);
+            var placed = new List<Vector2Int>(shape.Length);
+            ApplyAt(occ, x, y, shape, true, placed);
 
-            // Apply clears
             var cleared = new List<Vector2Int>(w + h);
             ApplyLineClears(occ, cleared);
 
-            // Recurse
             if (next())
                 return true;
 
-            // Undo clears + placement
             UndoCells(occ, cleared);
-            UndoCells(occ, touched);
+            UndoCells(occ, placed);
         }
 
         return false;
@@ -162,7 +151,6 @@ public static class SolvableHandGenerator
             if (x < 0 || x >= w || y < 0 || y >= h) return false;
             if (occ[x, y]) return false;
         }
-
         return true;
     }
 
@@ -182,14 +170,11 @@ public static class SolvableHandGenerator
         int w = occ.GetLength(0);
         int h = occ.GetLength(1);
 
-        // Full rows
         for (int y = 0; y < h; y++)
         {
             bool full = true;
             for (int x = 0; x < w; x++)
-            {
                 if (!occ[x, y]) { full = false; break; }
-            }
 
             if (full)
             {
@@ -204,14 +189,11 @@ public static class SolvableHandGenerator
             }
         }
 
-        // Full cols
         for (int x = 0; x < w; x++)
         {
             bool full = true;
             for (int y = 0; y < h; y++)
-            {
                 if (!occ[x, y]) { full = false; break; }
-            }
 
             if (full)
             {

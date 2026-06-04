@@ -93,7 +93,7 @@ public sealed class UIScript : MonoBehaviour
 
     public void SetClues(int found, int target)
     {
-        string s = (target > 0) ? $"Clues: {found}/{target}" : $"Clues: {found}";
+        string s = (target > 0) ? $"Clues to collect: {found}/{target}" : $"Clues to collect: {found}";
         if (cluesTMP) cluesTMP.text = s;
         if (cluesText) cluesText.text = s;
     }

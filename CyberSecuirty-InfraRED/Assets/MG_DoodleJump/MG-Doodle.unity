@@ -7897,7 +7897,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7961ee71475a6dc43b36a9ae70bd8e8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MinigameFinish
-  minigameId: DoodleJump
+  minigameId: doodlejump
   mainSceneBuildIndex: 4
   returnSpawnId: FromDoodleJump
   mainEventId: cutscene_after_DoodleJump

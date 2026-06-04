@@ -38,48 +38,47 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Header("Piece Materials (textures/colors)")]
     public Material[] pieceMaterials;
 
-    [Header("Ghost Preview (NEW)")]
-    public Material ghostValidMaterial;
-    public Material ghostInvalidMaterial;
-
-    [Header("Piece Rules")]
-    public bool allowRotation = true;
+    [Header("Rules")]
+    public bool allowRotation = false;
 
     [Header("Difficulty")]
-    [Range(0f, 1f)] public float solvableHandChance = 0.80f;
+    [Range(0f, 1f)] public float solvableHandChance = 0.72f;
     public bool scaleDifficultyOverTime = true;
-    [Range(0f, 1f)] public float minSolvableChanceLate = 0.35f;
+    [Range(0f, 1f)] public float minSolvableChanceLate = 0.24f;
 
     [Header("Scoring")]
-    public int pointsPerBlockPlaced = 8;
-    public int pointsPerLineClear = 180;
-    public int pointsPerCellCleared = 6;
-    public int pointsPerClueCollected = 350;
-    public float comboMultiplierStep = 0.65f;
+    public int pointsPerBlockPlaced = 6;
+    public int pointsPerLineClear = 240;
+    public int pointsPerCellCleared = 8;
+    public int pointsPerClueCollected = 450;
+    public float comboMultiplierStep = 0.70f;
 
-    [Header("Score Fly Text (updates score only on arrival)")]
+    [Header("Score Fly Text (score updates only on arrival)")]
     public GameObject scoreFlyTextPrefab;
     public RectTransform scoreTargetRect;
     public Vector2Int scoreFlyFromCell = new Vector2Int(-1, -1);
 
+    [Header("Feedback Text")]
+    public GameObject feedbackTextPrefab;
+    public RectTransform feedbackSpawnRect;
+
     [Header("Clues")]
     public bool enableClues = true;
-    [Range(0f, 1f)] public float clueChancePerPlacedCell = 0.06f;
-    public int cluesTargetToWin = 0;
-    public GameObject clueVisualPrefab;
+    [Range(0f, 1f)] public float clueChancePerPlacedCell = 0.03f;
+    public int cluesTargetToWin = 6;
+    public GameObject clueVisualPrefab; // world fingerprint (SpriteRenderer prefab)
     public Vector3 clueLocalOffset = new Vector3(0f, 0.55f, -0.02f);
     public Vector3 clueLocalScale = Vector3.one * 0.25f;
 
-    [Header("Clear VFX (optional)")]
-    public ParticleSystem clearCellVfxPrefab;
-    public GameObject clearRowVfxPrefab;
-    public GameObject clearColVfxPrefab;
-    [SerializeField] float sweepZOffset = -0.03f;
+    [Header("VFX (Procedural)")]
+    public BoardVfxController boardVfx;
+    public int comboBigPopExtraBurst = 30;
+    public float comboBigPopScale = 1.8f;
 
-    [Header("Juice: Camera & Clue Fly")]
+    [Header("Juice")]
     public CameraShake cameraShake;
     public Canvas uiCanvas;
-    public GameObject clueFlyIconPrefab;
+    public GameObject clueFlyIconPrefab; // UI Image prefab with ClueFlyToUI
 
     [Header("Random Seed (0 = random)")]
     public int seed = 0;
@@ -123,6 +122,8 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (!boardSpace && boardBottomLeft) boardSpace = boardBottomLeft.parent;
         if (!handSpace && handBottomLeft) handSpace = handBottomLeft.parent;
 
+        if (boardVfx && !boardVfx.cam) boardVfx.cam = cam;
+
         occ = new bool[width, height];
         placedVisual = new GameObject[width, height];
 
@@ -158,7 +159,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         if (!boardBottomLeft || !boardTopRight || !boardSpace)
         {
-            Debug.LogError("Board markers/space missing. Assign BoardBottomLeft, BoardTopRight, and BoardSpace.");
+            Debug.LogError("Board markers/space missing. Assign BoardBottomLeft, BoardTopRight, BoardSpace.");
             return;
         }
 
@@ -240,8 +241,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         float ly = (w.y - boardStartWorld.y) / cellSize;
         return new Vector2Int(Mathf.RoundToInt(lx), Mathf.RoundToInt(ly));
     }
-
-    bool Inside(int x, int y) => x >= 0 && x < width && y >= 0 && y < height;
 
     public bool TryGetMouseBoardPoint(out Vector3 worldPoint)
     {
@@ -325,7 +324,7 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         if (!handBottomLeft || !handTopRight || !handSpace)
         {
-            Debug.LogError("Hand markers/space missing. Assign HandBottomLeft, HandTopRight, and HandSpace.");
+            Debug.LogError("Hand markers/space missing. Assign HandBottomLeft, HandTopRight, HandSpace.");
             return result;
         }
 
@@ -394,23 +393,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         return true;
     }
 
-    Vector3 ScoreFlyOrigin()
-    {
-        if (scoreFlyFromCell.x >= 0 && scoreFlyFromCell.y >= 0 &&
-            scoreFlyFromCell.x < width && scoreFlyFromCell.y < height)
-            return GridToWorld(scoreFlyFromCell);
-
-        return GridToWorld(new Vector2Int(width / 2, height / 2));
-    }
-
-    Vector3 ComputeShapeWorldCenter(Vector2Int anchor, Vector2Int[] shape)
-    {
-        Vector3 sum = Vector3.zero;
-        for (int i = 0; i < shape.Length; i++)
-            sum += GridToWorld(new Vector2Int(anchor.x + shape[i].x, anchor.y + shape[i].y));
-        return sum / Mathf.Max(1, shape.Length);
-    }
-
     bool AnyHandPiecePlaceable()
     {
         for (int i = 0; i < handPieces.Count; i++)
@@ -451,6 +433,23 @@ public sealed class TetrisGameManager : MonoBehaviour
         return false;
     }
 
+    Vector3 ScoreFlyOrigin()
+    {
+        if (scoreFlyFromCell.x >= 0 && scoreFlyFromCell.y >= 0 &&
+            scoreFlyFromCell.x < width && scoreFlyFromCell.y < height)
+            return GridToWorld(scoreFlyFromCell);
+
+        return GridToWorld(new Vector2Int(width / 2, height / 2));
+    }
+
+    Vector3 ComputeShapeWorldCenter(Vector2Int anchor, Vector2Int[] shape)
+    {
+        Vector3 sum = Vector3.zero;
+        for (int i = 0; i < shape.Length; i++)
+            sum += GridToWorld(new Vector2Int(anchor.x + shape[i].x, anchor.y + shape[i].y));
+        return sum / Mathf.Max(1, shape.Length);
+    }
+
     public bool TryPlacePieceAtAnchor(PieceView piece, Vector2Int anchor)
     {
         if (ended) return false;
@@ -479,6 +478,14 @@ public sealed class TetrisGameManager : MonoBehaviour
 
             SpawnScoreFly(ScoreFlyOrigin(), finalClearGain);
 
+            if (boardVfx && clearedLines >= 2)
+            {
+                var center = GridToWorld(new Vector2Int(width / 2, height / 2));
+                boardVfx.SpawnCellPop(center, cellSize, extraBurst: comboBigPopExtraBurst, sizeScale: comboBigPopScale);
+            }
+
+            SpawnFeedbackForClear(clearedLines, combo);
+
             if (cameraShake)
             {
                 float strengthMul = 1f + 0.35f * (clearedLines - 1) + 0.02f * clearedCells;
@@ -490,6 +497,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         {
             combo = 1;
             ui?.SetCombo(combo);
+            SpawnFeedback("Nice!");
         }
 
         handPieces.Remove(piece);
@@ -501,6 +509,30 @@ public sealed class TetrisGameManager : MonoBehaviour
             GameOver_NoSpace();
 
         return true;
+    }
+
+    void SpawnFeedbackForClear(int clearedLines, int comboNow)
+    {
+        if (clearedLines >= 3) { SpawnFeedback("Amazing!"); return; }
+        if (clearedLines == 2) { SpawnFeedback("Good job!"); return; }
+
+        if (comboNow >= 3) SpawnFeedback($"Combo x{comboNow}!");
+        else SpawnFeedback("Great!");
+    }
+
+    void SpawnFeedback(string msg)
+    {
+        if (!uiCanvas || !feedbackTextPrefab) return;
+
+        var go = Instantiate(feedbackTextPrefab, uiCanvas.transform);
+        var fly = go.GetComponent<FeedbackTextFly>();
+        if (!fly) { Destroy(go); return; }
+
+        var rt = go.GetComponent<RectTransform>();
+        if (feedbackSpawnRect) rt.position = feedbackSpawnRect.position;
+        else rt.anchoredPosition = Vector2.zero;
+
+        fly.SetText(msg);
     }
 
     void SpawnScoreFly(Vector3 worldPos, int amount)
@@ -552,12 +584,14 @@ public sealed class TetrisGameManager : MonoBehaviour
             if (enableClues && clueVisualPrefab && rng.NextDouble() < clueChancePerPlacedCell)
             {
                 data.hasClue = true;
-                var clue = Instantiate(clueVisualPrefab, go.transform);
-                clue.name = "ClueVisual";
-                clue.transform.localPosition = clueLocalOffset * cellSize;
-                clue.transform.localRotation = Quaternion.identity;
-                clue.transform.localScale = clueLocalScale;
-                data.clueVisual = clue.transform;
+
+                var clueGO = Instantiate(clueVisualPrefab, go.transform, false);
+                clueGO.name = "ClueVisual";
+                clueGO.transform.localPosition = clueLocalOffset * cellSize;
+                clueGO.transform.localRotation = Quaternion.identity;
+                clueGO.transform.localScale = clueLocalScale;
+
+                data.clueVisual = clueGO.transform;
             }
             else
             {
@@ -594,8 +628,26 @@ public sealed class TetrisGameManager : MonoBehaviour
         if (fullRows.Count == 0 && fullCols.Count == 0)
             return 0;
 
-        for (int i = 0; i < fullRows.Count; i++) SpawnRowClearVfx(fullRows[i]);
-        for (int i = 0; i < fullCols.Count; i++) SpawnColClearVfx(fullCols[i]);
+        if (boardVfx)
+        {
+            for (int i = 0; i < fullRows.Count; i++)
+            {
+                int y = fullRows[i];
+                Vector3 left = GridToWorld(new Vector2Int(0, y));
+                Vector3 right = GridToWorld(new Vector2Int(width - 1, y));
+                Vector3 center = (left + right) * 0.5f;
+                boardVfx.SpawnRowSweep(center, cellSize, width);
+            }
+
+            for (int i = 0; i < fullCols.Count; i++)
+            {
+                int x = fullCols[i];
+                Vector3 bottom = GridToWorld(new Vector2Int(x, 0));
+                Vector3 top = GridToWorld(new Vector2Int(x, height - 1));
+                Vector3 center = (bottom + top) * 0.5f;
+                boardVfx.SpawnColSweep(center, cellSize, height);
+            }
+        }
 
         for (int i = 0; i < fullRows.Count; i++)
         {
@@ -619,7 +671,11 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         if (!occ[x, y]) return;
 
-        SpawnCellClearVfx(new Vector2Int(x, y));
+        if (boardVfx)
+        {
+            var pos = GridToWorld(new Vector2Int(x, y));
+            boardVfx.SpawnCellPop(pos, cellSize);
+        }
 
         occ[x, y] = false;
         clearedCells++;
@@ -634,46 +690,6 @@ public sealed class TetrisGameManager : MonoBehaviour
             Destroy(go);
             placedVisual[x, y] = null;
         }
-    }
-
-    void SpawnCellClearVfx(Vector2Int cell)
-    {
-        if (!clearCellVfxPrefab) return;
-
-        var pos = GridToWorld(cell);
-        var fx = Instantiate(clearCellVfxPrefab, pos, Quaternion.identity);
-        fx.transform.localScale = Vector3.one * cellSize;
-
-        var main = fx.main;
-        Destroy(fx.gameObject, main.duration + main.startLifetime.constantMax + 0.25f);
-    }
-
-    void SpawnRowClearVfx(int y)
-    {
-        if (!clearRowVfxPrefab) return;
-
-        Vector3 left = GridToWorld(new Vector2Int(0, y));
-        Vector3 right = GridToWorld(new Vector2Int(width - 1, y));
-        Vector3 center = (left + right) * 0.5f;
-        center.z += sweepZOffset;
-
-        var go = Instantiate(clearRowVfxPrefab, center, Quaternion.identity);
-        go.transform.localScale = new Vector3(width * cellSize, cellSize * 0.6f, 1f);
-        Destroy(go, 2f);
-    }
-
-    void SpawnColClearVfx(int x)
-    {
-        if (!clearColVfxPrefab) return;
-
-        Vector3 bottom = GridToWorld(new Vector2Int(x, 0));
-        Vector3 top = GridToWorld(new Vector2Int(x, height - 1));
-        Vector3 center = (bottom + top) * 0.5f;
-        center.z += sweepZOffset;
-
-        var go = Instantiate(clearColVfxPrefab, center, Quaternion.identity);
-        go.transform.localScale = new Vector3(cellSize * 0.6f, height * cellSize, 1f);
-        Destroy(go, 2f);
     }
 
     void TrySpawnClueFly(Vector3 worldPos)
