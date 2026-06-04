@@ -62,11 +62,20 @@ public sealed class TetrisGameManager : MonoBehaviour
     public GameObject feedbackTextPrefab;
     public RectTransform feedbackSpawnRect;
 
-    [Header("Clues")]
+    [Header("Clues (Preview + Board)")]
     public bool enableClues = true;
-    [Range(0f, 1f)] public float clueChancePerPlacedCell = 0.03f;
+
+    [Tooltip("Chance that a dealt piece will contain a clue.")]
+    [Range(0f, 1f)] public float previewPieceHasClueChance = 0.35f;
+
+    [Tooltip("Max number of clue blocks on a single preview piece.")]
+    [Range(1, 3)] public int maxCluesPerPiece = 1;
+
     public int cluesTargetToWin = 6;
-    public GameObject clueVisualPrefab; // world fingerprint (SpriteRenderer prefab)
+
+    [Tooltip("World fingerprint prefab (SpriteRenderer). Used both on preview blocks and placed blocks.")]
+    public GameObject clueVisualPrefab;
+
     public Vector3 clueLocalOffset = new Vector3(0f, 0.55f, -0.02f);
     public Vector3 clueLocalScale = Vector3.one * 0.25f;
 
@@ -78,7 +87,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     [Header("Juice")]
     public CameraShake cameraShake;
     public Canvas uiCanvas;
-    public GameObject clueFlyIconPrefab; // UI Image prefab with ClueFlyToUI
+    public GameObject clueFlyIconPrefab;
 
     [Header("Random Seed (0 = random)")]
     public int seed = 0;
@@ -159,7 +168,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         if (!boardBottomLeft || !boardTopRight || !boardSpace)
         {
-            Debug.LogError("Board markers/space missing. Assign BoardBottomLeft, BoardTopRight, BoardSpace.");
+            Debug.LogError("Board markers/space missing.");
             return;
         }
 
@@ -175,7 +184,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         float usableH = maxY - minY;
         if (usableW <= 0f || usableH <= 0f)
         {
-            Debug.LogError("Board usable area invalid. Check markers/padding.");
+            Debug.LogError("Board usable area invalid.");
             return;
         }
 
@@ -199,11 +208,8 @@ public sealed class TetrisGameManager : MonoBehaviour
 
     void EnsureHandBackground()
     {
-        if (!handBackgroundPrefab || !handBottomLeft || !handTopRight || !handSpace)
-            return;
-
-        if (handBackgroundInstance)
-            return;
+        if (!handBackgroundPrefab || !handBottomLeft || !handTopRight || !handSpace) return;
+        if (handBackgroundInstance) return;
 
         var go = Instantiate(handBackgroundPrefab, handSpace);
         go.name = "HandBackground";
@@ -227,13 +233,7 @@ public sealed class TetrisGameManager : MonoBehaviour
     }
 
     public Vector3 GridToWorld(Vector2Int g)
-    {
-        return new Vector3(
-            boardStartWorld.x + g.x * cellSize,
-            boardStartWorld.y + g.y * cellSize,
-            gridZ
-        );
-    }
+        => new Vector3(boardStartWorld.x + g.x * cellSize, boardStartWorld.y + g.y * cellSize, gridZ);
 
     public Vector2Int WorldToGrid(Vector3 w)
     {
@@ -245,7 +245,6 @@ public sealed class TetrisGameManager : MonoBehaviour
     public bool TryGetMouseBoardPoint(out Vector3 worldPoint)
     {
         worldPoint = default;
-
         var mouse = Mouse.current;
         if (!cam || mouse == null) return false;
 
@@ -261,7 +260,6 @@ public sealed class TetrisGameManager : MonoBehaviour
     void BuildGridVisuals()
     {
         if (!gridCellPrefab) return;
-
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
         {
@@ -294,14 +292,9 @@ public sealed class TetrisGameManager : MonoBehaviour
                     rng,
                     allowRotation,
                     out hand))
-            {
                 hand = GenerateRandomHand();
-            }
         }
-        else
-        {
-            hand = GenerateRandomHand();
-        }
+        else hand = GenerateRandomHand();
 
         Vector3[] spawnPoints = GetHandSpawnPointsWorld();
         for (int i = 0; i < 3; i++)
@@ -311,11 +304,48 @@ public sealed class TetrisGameManager : MonoBehaviour
 
             var pv = root.AddComponent<PieceView>();
             pv.Init(this, hand[i].shape, pieceBlockPrefab, PickMaterial(), spawnPoints[i]);
+
+            // ✅ Generate preview clues and show them on the tray piece
+            if (enableClues)
+            {
+                bool[] mask = GeneratePreviewClueMask(hand[i].shape.Length);
+                pv.SetPreviewClues(mask, clueVisualPrefab, clueLocalOffset, clueLocalScale);
+            }
+            else
+            {
+                pv.SetPreviewClues(null, null, Vector3.zero, Vector3.one);
+            }
+
             handPieces.Add(pv);
         }
 
         if (!AnyHandPiecePlaceable())
             GameOver_NoSpace();
+    }
+
+    bool[] GeneratePreviewClueMask(int len)
+    {
+        var mask = new bool[len];
+
+        // Decide if this piece has any clue at all
+        if (rng.NextDouble() > previewPieceHasClueChance)
+            return mask;
+
+        int clues = Mathf.Clamp(maxCluesPerPiece, 1, 3);
+        clues = Mathf.Min(clues, len);
+
+        // Pick random unique indices
+        for (int k = 0; k < clues; k++)
+        {
+            int tries = 0;
+            while (tries++ < 20)
+            {
+                int idx = rng.Next(0, len);
+                if (!mask[idx]) { mask[idx] = true; break; }
+            }
+        }
+
+        return mask;
     }
 
     Vector3[] GetHandSpawnPointsWorld()
@@ -324,7 +354,7 @@ public sealed class TetrisGameManager : MonoBehaviour
 
         if (!handBottomLeft || !handTopRight || !handSpace)
         {
-            Debug.LogError("Hand markers/space missing. Assign HandBottomLeft, HandTopRight, HandSpace.");
+            Debug.LogError("Hand markers/space missing.");
             return result;
         }
 
@@ -370,7 +400,6 @@ public sealed class TetrisGameManager : MonoBehaviour
         for (int y = 0; y < height; y++)
         for (int x = 0; x < width; x++)
             if (occ[x, y]) filled++;
-
         int total = width * height;
         return total == 0 ? 0f : (float)filled / total;
     }
@@ -462,7 +491,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         int placementGain = pointsPerBlockPlaced * shape.Length;
         SpawnScoreFly(ComputeShapeWorldCenter(anchor, shape), placementGain);
 
-        CommitPlacement(shape, anchor, piece.PieceMaterial);
+        CommitPlacement(shape, anchor, piece.PieceMaterial, piece.ClueMask);
         PlayPlaceSound();
 
         int clearedLines, clearedCells;
@@ -481,7 +510,7 @@ public sealed class TetrisGameManager : MonoBehaviour
             if (boardVfx && clearedLines >= 2)
             {
                 var center = GridToWorld(new Vector2Int(width / 2, height / 2));
-                boardVfx.SpawnCellPop(center, cellSize, extraBurst: comboBigPopExtraBurst, sizeScale: comboBigPopScale);
+                boardVfx.SpawnCellPop(center, cellSize, extraBurst: 30, sizeScale: 1.8f);
             }
 
             SpawnFeedbackForClear(clearedLines, combo);
@@ -515,7 +544,6 @@ public sealed class TetrisGameManager : MonoBehaviour
     {
         if (clearedLines >= 3) { SpawnFeedback("Amazing!"); return; }
         if (clearedLines == 2) { SpawnFeedback("Good job!"); return; }
-
         if (comboNow >= 3) SpawnFeedback($"Combo x{comboNow}!");
         else SpawnFeedback("Great!");
     }
@@ -559,7 +587,7 @@ public sealed class TetrisGameManager : MonoBehaviour
         fly.Init(worldPos, $"+{amount}");
     }
 
-    void CommitPlacement(Vector2Int[] shape, Vector2Int anchor, Material mat)
+    void CommitPlacement(Vector2Int[] shape, Vector2Int anchor, Material mat, bool[] clueMask)
     {
         for (int i = 0; i < shape.Length; i++)
         {
@@ -581,7 +609,9 @@ public sealed class TetrisGameManager : MonoBehaviour
             var data = go.GetComponent<PlacedCellData>();
             if (!data) data = go.AddComponent<PlacedCellData>();
 
-            if (enableClues && clueVisualPrefab && rng.NextDouble() < clueChancePerPlacedCell)
+            bool hasClueHere = enableClues && clueMask != null && i < clueMask.Length && clueMask[i];
+
+            if (hasClueHere && clueVisualPrefab)
             {
                 data.hasClue = true;
 

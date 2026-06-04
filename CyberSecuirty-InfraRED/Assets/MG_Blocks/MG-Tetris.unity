@@ -774,7 +774,8 @@ MonoBehaviour:
   feedbackTextPrefab: {fileID: 771736962830330498, guid: 6efd27e278b6e5049ad7b45a9bf5ee3e, type: 3}
   feedbackSpawnRect: {fileID: 220274440}
   enableClues: 1
-  clueChancePerPlacedCell: 0.06
+  previewPieceHasClueChance: 0.2
+  maxCluesPerPiece: 1
   cluesTargetToWin: 9
   clueVisualPrefab: {fileID: 6539680256414756112, guid: e105b3060fa276640ae8def7f78599f6, type: 3}
   clueLocalOffset: {x: 0, y: 0, z: -0.55}
@@ -1233,7 +1234,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 19.96
+  orthographic size: 15.7
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
