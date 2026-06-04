@@ -23,10 +23,10 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
 
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
-    private Transform startParent;
-    private Vector2 startPosition;
+    private Canvas parentCanvas;
+    private Transform libraryParent;
+    private bool acceptedBySlot;
 
-    public string ClueId { get; private set; }
     public string PasswordValue { get; private set; }
     public PasswordClueType ClueType { get; private set; }
     public bool UsableForPassword { get; private set; }
@@ -35,6 +35,7 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
     {
         rectTransform = GetComponent<RectTransform>();
         canvasGroup = GetComponent<CanvasGroup>();
+        parentCanvas = GetComponentInParent<Canvas>();
 
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
@@ -42,16 +43,18 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
 
     public void Setup(string clueId, string clueText, string passwordValue, PasswordClueType clueType, bool usableForPassword)
     {
-        ClueId = clueId;
         PasswordValue = passwordValue;
         ClueType = clueType;
         UsableForPassword = usableForPassword;
+        libraryParent = transform.parent;
 
         if (labelText != null)
             labelText.text = clueText;
 
         if (background != null)
             background.color = usableForPassword ? usableColor : infoColor;
+
+        ResetRaycast();
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -59,10 +62,12 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
         if (!UsableForPassword)
             return;
 
-        startParent = transform.parent;
-        startPosition = rectTransform.anchoredPosition;
+        acceptedBySlot = false;
 
-        transform.SetParent(transform.root);
+        if (libraryParent == null)
+            libraryParent = transform.parent;
+
+        transform.SetParent(parentCanvas.transform, true);
         transform.SetAsLastSibling();
 
         canvasGroup.blocksRaycasts = false;
@@ -70,10 +75,19 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!UsableForPassword)
+        if (!UsableForPassword || parentCanvas == null)
             return;
 
-        rectTransform.position = eventData.position;
+        RectTransform canvasRect = parentCanvas.transform as RectTransform;
+
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            canvasRect,
+            eventData.position,
+            parentCanvas.worldCamera,
+            out Vector2 localPoint))
+        {
+            rectTransform.anchoredPosition = localPoint;
+        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -81,15 +95,49 @@ public sealed class DraggableClueCard : MonoBehaviour, IBeginDragHandler, IDragH
         if (!UsableForPassword)
             return;
 
-        canvasGroup.blocksRaycasts = true;
+        ResetRaycast();
 
-        if (transform.parent == transform.root)
+        if (!acceptedBySlot)
             ReturnToLibrary();
+    }
+
+    public void MarkAcceptedBySlot()
+    {
+        acceptedBySlot = true;
+        ResetRaycast();
+    }
+
+    public void HideInSlot()
+    {
+        ResetRaycast();
+        gameObject.SetActive(false);
     }
 
     public void ReturnToLibrary()
     {
-        transform.SetParent(startParent);
-        rectTransform.anchoredPosition = startPosition;
+        gameObject.SetActive(true);
+        ResetRaycast();
+
+        if (libraryParent != null)
+            transform.SetParent(libraryParent, false);
+
+        rectTransform.localScale = Vector3.one;
+        rectTransform.localRotation = Quaternion.identity;
+        rectTransform.anchoredPosition = Vector2.zero;
+
+        transform.SetAsLastSibling();
+
+        if (libraryParent is RectTransform parentRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+    }
+
+    private void ResetRaycast()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+        }
     }
 }
