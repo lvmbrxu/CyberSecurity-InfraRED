@@ -6,7 +6,7 @@ public class MinigameProgressApplier : MonoBehaviour
     [SerializeField] private string minigameId = "doodlejump";
 
     [Header("Block replay")]
-    [SerializeField] private GameObject replayTriggerObject; // the trigger GO or collider GO
+    [SerializeField] private GameObject replayTriggerObject;
 
     [Header("Lights / visuals")]
     [SerializeField] private GameObject lightOnn;
@@ -27,29 +27,34 @@ public class MinigameProgressApplier : MonoBehaviour
     [Header("Wall / blockers")]
     [SerializeField] private GameObject invisWall;
 
-    private void Start()
+    private void Awake()
     {
+        // Apply ASAP when the object exists (covers "Continue" / save load timing)
         Apply();
-        SaveManager.OnSaveChanged += Apply; // if save changes while scene is open
     }
 
-    private void OnDestroy()
+    private void OnEnable()
+    {
+        SaveManager.OnSaveChanged += Apply;
+        Apply(); // apply again when enabled (covers object being disabled/enabled)
+    }
+
+    private void OnDisable()
     {
         SaveManager.OnSaveChanged -= Apply;
     }
 
-    private void Apply()
+    // Make it public so you can manually call it from a Continue button if you want.
+    public void Apply()
     {
         bool done = SaveManager.IsMinigameCompleted(minigameId);
 
         // If not done, keep default scene setup (do nothing)
         if (!done) return;
 
-        // Block replay
         if (replayTriggerObject != null)
-            replayTriggerObject.SetActive(false); // simplest
+            replayTriggerObject.SetActive(false);
 
-        // Swap lights
         if (lightOnn != null) lightOnn.SetActive(false);
         if (lightOff != null) lightOff.SetActive(true);
 
@@ -59,7 +64,6 @@ public class MinigameProgressApplier : MonoBehaviour
         if (lightObjectOnn != null) lightObjectOnn.SetActive(false);
         if (lightObjectOff != null) lightObjectOff.SetActive(true);
 
-        // Next game indicators
         if (nextGameGL != null) nextGameGL.SetActive(true);
         if (nextGameGL2 != null) nextGameGL2.SetActive(true);
 
@@ -69,7 +73,6 @@ public class MinigameProgressApplier : MonoBehaviour
         if (nextGameObjectOnn != null) nextGameObjectOnn.SetActive(true);
         if (nextGameObjectOff != null) nextGameObjectOff.SetActive(false);
 
-        // Unlock wall
         if (invisWall != null) invisWall.SetActive(false);
     }
 }

@@ -144,9 +144,14 @@ public sealed class GameManager : MonoBehaviour
         if (!force && Mathf.Approximately(v, security01)) return;
 
         security01 = v;
-
+        
         if (securitySlider) securitySlider.value = security01;
-        if (securityPercentText) securityPercentText.text = Mathf.RoundToInt(security01 * 100f) + "%";
+
+        if (securityPercentText)
+        {
+            int pct = Mathf.RoundToInt(security01 * 100f);
+            securityPercentText.text = $"Secure yourself : {pct}%";
+        }
     }
 
     // ---------------- Fall handling (both phases; security is still "life") ----------------

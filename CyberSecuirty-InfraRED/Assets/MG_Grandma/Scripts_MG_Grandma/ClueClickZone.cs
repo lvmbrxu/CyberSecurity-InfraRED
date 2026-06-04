@@ -6,13 +6,14 @@ public sealed class SimpleClueClickZone : MonoBehaviour, IPointerEnterHandler, I
 {
     [Header("Tooltip")]
     [SerializeField] private TooltipController tooltipController;
+
     [TextArea]
     [SerializeField] private string tooltipText;
 
-    [Header("Highlight")]
+    [Header("Always Visible Highlight")]
     [SerializeField] private Image highlightImage;
-    [SerializeField] private float hoverAlpha = 0.22f;
-    [SerializeField] private float foundAlpha = 0.12f;
+    [SerializeField] private float normalAlpha = 0.14f;
+    [SerializeField] private float collectedAlpha = 0.22f;
 
     [Header("Collectable Clue")]
     [SerializeField] private bool canCollectClue;
@@ -27,22 +28,17 @@ public sealed class SimpleClueClickZone : MonoBehaviour, IPointerEnterHandler, I
 
     private void Awake()
     {
-        SetHighlight(0f);
+        SetHighlight(normalAlpha);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!collected)
-            SetHighlight(hoverAlpha);
-
         if (tooltipController != null && !string.IsNullOrWhiteSpace(tooltipText))
             tooltipController.Show(tooltipText);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        SetHighlight(collected ? foundAlpha : 0f);
-
         if (tooltipController != null)
             tooltipController.Hide();
     }
@@ -55,7 +51,7 @@ public sealed class SimpleClueClickZone : MonoBehaviour, IPointerEnterHandler, I
         clueInventory.AddClue(clueId, clueText, passwordValue, clueType, usableForPassword);
 
         collected = true;
-        SetHighlight(foundAlpha);
+        SetHighlight(collectedAlpha);
     }
 
     private void SetHighlight(float alpha)
