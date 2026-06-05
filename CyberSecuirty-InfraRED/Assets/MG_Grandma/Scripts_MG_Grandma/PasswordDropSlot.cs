@@ -1,14 +1,19 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     public event Action OnSlotChanged;
 
     [Header("Slot")]
     [SerializeField] private PasswordClueType acceptedType;
+
+    [Header("Manual Typing")]
+    [SerializeField] private TMP_InputField manualInput;
+    [SerializeField] private SimplePasswordBuilder passwordBuilder;
 
     [Header("Highlight")]
     [SerializeField] private Image highlightImage;
@@ -32,6 +37,12 @@ public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnte
 
         if (card == null || !card.UsableForPassword)
             return;
+
+        if (passwordBuilder != null && !passwordBuilder.CanUseDragDrop)
+        {
+            card.ReturnToLibrary();
+            return;
+        }
 
         if (card.ClueType != acceptedType)
         {
@@ -58,6 +69,15 @@ public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnte
         }
 
         OnSlotChanged?.Invoke();
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (manualInput == null)
+            return;
+
+        manualInput.Select();
+        manualInput.ActivateInputField();
     }
 
     public void OnPointerEnter(PointerEventData eventData)

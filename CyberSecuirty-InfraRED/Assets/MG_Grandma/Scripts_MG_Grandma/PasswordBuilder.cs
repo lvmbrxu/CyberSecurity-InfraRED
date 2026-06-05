@@ -9,12 +9,15 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
     [SerializeField] private PasswordDropSlot numberSlot;
     [SerializeField] private PasswordDropSlot symbolSlot;
 
+    [Header("Manual Input")]
+    [SerializeField] private TMP_InputField passwordInput;
+    [SerializeField] private TMP_Text placeholderText;
+
     [Header("Password")]
     [SerializeField] private string correctPassword = "Bowie1998!";
     [SerializeField] private int maxAttempts = 5;
 
     [Header("UI")]
-    [SerializeField] private TMP_Text passwordFieldText;
     [SerializeField] private TMP_Text feedbackText;
     [SerializeField] private TMP_Text attemptsText;
     [SerializeField] private Button submitButton;
@@ -23,6 +26,10 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
     private int attemptsLeft;
     private bool solved;
     private bool locked;
+    private bool manualMode;
+    private bool updatingInput;
+
+    public bool CanUseDragDrop => !manualMode && string.IsNullOrWhiteSpace(passwordInput != null ? passwordInput.text : "");
 
     private void Awake()
     {
@@ -37,6 +44,9 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
         if (symbolSlot != null)
             symbolSlot.OnSlotChanged += RefreshPasswordField;
 
+        if (passwordInput != null)
+            passwordInput.onValueChanged.AddListener(HandleManualInputChanged);
+
         if (submitButton != null)
             submitButton.onClick.AddListener(Submit);
 
@@ -45,7 +55,7 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
 
         RefreshPasswordField();
         RefreshAttempts();
-        SetFeedback("Drag clues into the password field.");
+        SetFeedback("Drag clues or type the password manually.");
     }
 
     private void OnDestroy()
@@ -58,6 +68,32 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
 
         if (symbolSlot != null)
             symbolSlot.OnSlotChanged -= RefreshPasswordField;
+
+        if (passwordInput != null)
+            passwordInput.onValueChanged.RemoveListener(HandleManualInputChanged);
+    }
+
+    private void HandleManualInputChanged(string value)
+    {
+        if (updatingInput)
+            return;
+
+        bool hasTypedPassword = !string.IsNullOrWhiteSpace(value);
+
+        if (hasTypedPassword && !manualMode)
+        {
+            manualMode = true;
+            ReturnDraggedCards();
+            SetFeedback("Manual typing enabled. Clear the field to use dragged clues again.");
+            return;
+        }
+
+        if (!hasTypedPassword && manualMode)
+        {
+            manualMode = false;
+            RefreshPasswordField();
+            SetFeedback("Drag mode enabled again.");
+        }
     }
 
     public void Submit()
@@ -65,13 +101,19 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
         if (solved || locked)
             return;
 
-        if (!AllSlotsFilled())
+        string password = GetSubmittedPassword();
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            SetFeedback("Enter a password or build one from clues.");
+            return;
+        }
+
+        if (!manualMode && !AllSlotsFilled())
         {
             SetFeedback("Complete the password with a name, number, and symbol.");
             return;
         }
-
-        string password = BuildPassword();
 
         if (password == correctPassword)
         {
@@ -95,6 +137,34 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
 
     public void Clear()
     {
+        ReturnDraggedCards();
+
+        updatingInput = true;
+
+        if (passwordInput != null)
+            passwordInput.text = "";
+
+        updatingInput = false;
+
+        manualMode = false;
+
+        RefreshPasswordField();
+        SetFeedback("Password cleared.");
+    }
+
+    private string GetSubmittedPassword()
+    {
+        if (manualMode && passwordInput != null)
+            return passwordInput.text.Trim();
+
+        if (AllSlotsFilled())
+            return BuildPassword();
+
+        return "";
+    }
+
+    private void ReturnDraggedCards()
+    {
         if (wordSlot != null)
             wordSlot.ClearSlot();
 
@@ -103,9 +173,6 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
 
         if (symbolSlot != null)
             symbolSlot.ClearSlot();
-
-        RefreshPasswordField();
-        SetFeedback("Password cleared.");
     }
 
     private bool AllSlotsFilled()
@@ -130,17 +197,19 @@ public sealed class SimplePasswordBuilder : MonoBehaviour
         string number = numberSlot != null && numberSlot.HasValue ? numberSlot.CurrentValue : "Number";
         string symbol = symbolSlot != null && symbolSlot.HasValue ? symbolSlot.CurrentValue : "Symbol";
 
+        if (AllSlotsFilled())
+            return BuildPassword();
+
         return word + " + " + number + " + " + symbol;
     }
 
     private void RefreshPasswordField()
     {
-        if (passwordFieldText == null)
+        if (manualMode)
             return;
 
-        passwordFieldText.text = AllSlotsFilled()
-            ? BuildPassword()
-            : BuildReadablePassword();
+        if (placeholderText != null)
+            placeholderText.text = BuildReadablePassword();
     }
 
     private void RefreshAttempts()
