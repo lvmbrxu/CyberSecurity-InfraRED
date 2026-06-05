@@ -1,37 +1,55 @@
 using UnityEngine;
 
-public class DialogueTriggerZone : MonoBehaviour
+public class DialogueTrigger_CameraSwap_CM3 : MonoBehaviour
 {
-    [Header("What happens when player enters")]
     public DialogueUI dialogueUI;
     public DialogueDataSO dialogueData;
 
-    [Header("Behavior")]
+    [Header("Camera swap (CM3)")]
+    public bool swapCamera = true;
+    public CameraPrioritySwap_CM3 cameraSwap;
+
+    [Header("Trigger Behavior")]
     public bool triggerOnce = true;
     public bool disableAfterTrigger = true;
 
-    private bool hasTriggered;
+    private bool triggered;
 
     private void Reset()
     {
-        // Helps prevent trigger events failing due to missing setup
         var col = GetComponent<Collider>();
         if (col != null) col.isTrigger = true;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (hasTriggered && triggerOnce) return;
+        if (triggerOnce && triggered) return;
+        if (!other.CompareTag("Player")) return;
+
         if (dialogueUI == null || dialogueData == null) return;
         if (dialogueUI.IsOpen) return;
 
-        // Only react to player
-        if (!other.CompareTag("Player")) return;
+        triggered = true;
 
-        hasTriggered = true;
-        dialogueUI.Open(dialogueData);
+        if (swapCamera && cameraSwap != null)
+            cameraSwap.ActivateTargetCamera();
+
+        // subscribe once
+        dialogueUI.Closed -= OnDialogueClosed;
+        dialogueUI.Closed += OnDialogueClosed;
+
+        dialogueUI.OpenChoice(dialogueData);
 
         if (disableAfterTrigger)
-            gameObject.SetActive(false); // clean: stops re-triggering forever
+            gameObject.SetActive(false);
+    }
+
+    private void OnDialogueClosed()
+    {
+        if (dialogueUI != null)
+            dialogueUI.Closed -= OnDialogueClosed;
+
+        if (swapCamera && cameraSwap != null)
+            cameraSwap.Restore();
     }
 }

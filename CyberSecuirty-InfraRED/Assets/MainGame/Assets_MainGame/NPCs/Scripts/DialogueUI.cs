@@ -4,13 +4,16 @@ using TMPro;
 
 public class DialogueUI : MonoBehaviour
 {
+    public System.Action Closed; // ✅ camera restore hooks into this
+
     [Header("Core UI")]
-    public GameObject dialogueBox;      // DialogueBox
-    public TMP_Text npcText;            // NpcText (TMP)
+    public GameObject dialogueBox; // DialogueBox
+    public TMP_Text lineText;      // NpcText (TMP) - can be used for narrator too
 
     [Header("Profile Pics")]
-    public GameObject npcProfilePic;    // ProfilePicPassword (NPC)
-    public GameObject playerProfilePic; // ProfilePicPlayer (Player)
+    public GameObject npcProfilePic;      // ProfilePicPassword
+    public GameObject playerProfilePic;   // ProfilePicPlayer
+    public GameObject narratorProfilePic; // optional
 
     [Header("Buttons")]
     public Button continueButton;       // ContinueButton (stretch full panel, alpha 0)
@@ -19,128 +22,219 @@ public class DialogueUI : MonoBehaviour
     public TMP_Text goodChoiceLabel;    // ButtonGoodChoice/Text (TMP)
     public TMP_Text badChoiceLabel;     // ButtonBadChoice/Text (TMP)
 
-    [Header("Data")]
+    [Header("State")]
     public GameStateSO gameState;
 
     [Header("Freeze Player (Click-to-Move script)")]
-    public MonoBehaviour clickToMoveScript; 
+    public MonoBehaviour clickToMoveScript; // drag your click-to-move component here
 
-    private DialogueDataSO currentData;
+    // ---- Choice dialogue data ----
+    private DialogueDataSO choiceData;
 
-    private enum Step { Hidden, NpcTalking, PlayerChoosing, NpcFeedback }
-    private Step step = Step.Hidden;
+    // ---- Narration data ----
+    private NarrationSequenceSO narrationSequence;
+    private int narrationIndex;
+
+    private enum Mode { None, Choice, Narration }
+    private Mode mode = Mode.None;
+
+    private enum ChoiceStep { Hidden, NpcLine, Choosing, NpcFeedback }
+    private ChoiceStep choiceStep = ChoiceStep.Hidden;
 
     private void Awake()
     {
-        // Button wiring once
         continueButton.onClick.AddListener(OnContinueClicked);
         goodChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: true));
         badChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: false));
 
-        Hide(); 
+        Hide(); // start hidden
     }
 
-    public void Open(DialogueDataSO data)
+    // =========================
+    // PUBLIC API
+    // =========================
+
+    public void OpenChoice(DialogueDataSO data)
     {
         if (data == null) return;
 
-        currentData = data;
-        dialogueBox.SetActive(true);
+        mode = Mode.Choice;
+        choiceData = data;
 
-        if (clickToMoveScript != null)
-            clickToMoveScript.enabled = false;
+        ShowUI();
+        FreezePlayer(true);
 
-        step = Step.NpcTalking;
+        choiceStep = ChoiceStep.NpcLine;
 
-        npcProfilePic.SetActive(true);
-        playerProfilePic.SetActive(false);
+        SetSpeaker(SpeakerType.NPC);
+        lineText.gameObject.SetActive(true);
+        lineText.text = choiceData.npcLine;
 
-        SetNpcTextVisible(true);
-        npcText.text = currentData.npcLine;
+        SetChoicesVisible(false);
+        SetContinueVisible(true); // click anywhere
+    }
+
+    public void OpenNarration(NarrationSequenceSO sequence)
+    {
+        if (sequence == null || sequence.lines == null || sequence.lines.Length == 0) return;
+
+        mode = Mode.Narration;
+        narrationSequence = sequence;
+        narrationIndex = 0;
+
+        ShowUI();
+        FreezePlayer(true);
 
         SetChoicesVisible(false);
         SetContinueVisible(true);
+
+        ShowNarrationLine();
     }
+
+    public void Hide()
+    {
+        mode = Mode.None;
+        choiceStep = ChoiceStep.Hidden;
+
+        choiceData = null;
+        narrationSequence = null;
+        narrationIndex = 0;
+
+        if (dialogueBox != null)
+            dialogueBox.SetActive(false);
+
+        FreezePlayer(false);
+
+        if (lineText != null)
+            lineText.gameObject.SetActive(true);
+
+        Closed?.Invoke(); // ✅ camera swap restores here
+    }
+
+    public bool IsOpen => dialogueBox != null && dialogueBox.activeSelf;
+
+    // =========================
+    // INTERNAL FLOW
+    // =========================
 
     private void OnContinueClicked()
     {
-        if (currentData == null) return;
+        if (!IsOpen) return;
 
-        if (step == Step.NpcTalking)
+        if (mode == Mode.Narration)
         {
-            step = Step.PlayerChoosing;
+            narrationIndex++;
 
-            npcProfilePic.SetActive(false);
-            playerProfilePic.SetActive(true);
-            
-            SetNpcTextVisible(false);
+            if (narrationSequence == null || narrationIndex >= narrationSequence.lines.Length)
+            {
+                Hide();
+                return;
+            }
 
-            goodChoiceLabel.text = currentData.choiceAText;
-            badChoiceLabel.text  = currentData.choiceBText;
-            
-            SetContinueVisible(false);
-            SetChoicesVisible(true);
+            ShowNarrationLine();
+            return;
         }
-        else if (step == Step.NpcFeedback)
+
+        if (mode == Mode.Choice && choiceData != null)
         {
-            // Close after feedback
-            Hide();
+            if (choiceStep == ChoiceStep.NpcLine)
+            {
+                choiceStep = ChoiceStep.Choosing;
+
+                SetSpeaker(SpeakerType.Player);
+
+                // Hide text during the choice phase (your requirement)
+                lineText.gameObject.SetActive(false);
+
+                goodChoiceLabel.text = choiceData.choiceAText;
+                badChoiceLabel.text  = choiceData.choiceBText;
+
+                // IMPORTANT: disable continue so it doesn't block option clicks
+                SetContinueVisible(false);
+                SetChoicesVisible(true);
+            }
+            else if (choiceStep == ChoiceStep.NpcFeedback)
+            {
+                Hide();
+            }
         }
     }
 
     private void OnChoiceClicked(bool isA)
     {
-        if (currentData == null) return;
-        if (step != Step.PlayerChoosing) return;
+        if (mode != Mode.Choice) return;
+        if (choiceData == null) return;
+        if (choiceStep != ChoiceStep.Choosing) return;
 
-        // Apply results to GameState (A = good button, B = bad button)
-        if (currentData.affectsPlatforms)
-            gameState.platformGlitchMode = isA ? currentData.platformResultIfA : currentData.platformResultIfB;
+        if (choiceData.affectsPlatforms)
+            gameState.platformGlitchMode = isA ? choiceData.platformResultIfA : choiceData.platformResultIfB;
 
-        if (currentData.affectsPopups)
-            gameState.popupMode = isA ? currentData.popupResultIfA : currentData.popupResultIfB;
+        if (choiceData.affectsPopups)
+            gameState.popupMode = isA ? choiceData.popupResultIfA : choiceData.popupResultIfB;
 
-        // STEP 3: NPC feedback 
-        step = Step.NpcFeedback;
+        choiceStep = ChoiceStep.NpcFeedback;
 
-        playerProfilePic.SetActive(false);
-        npcProfilePic.SetActive(true);
+        SetSpeaker(SpeakerType.NPC);
 
-        SetNpcTextVisible(true);
-        npcText.text = isA ? currentData.choiceAFeedback : currentData.choiceBFeedback;
+        lineText.gameObject.SetActive(true);
+        lineText.text = isA ? choiceData.choiceAFeedback : choiceData.choiceBFeedback;
 
         SetChoicesVisible(false);
         SetContinueVisible(true); // click anywhere to close
     }
 
-    public void Hide()
+    private void ShowNarrationLine()
     {
-        step = Step.Hidden;
-        currentData = null;
+        var line = narrationSequence.lines[narrationIndex];
 
-        dialogueBox.SetActive(false);
+        SetSpeaker(line.speaker);
 
-        // Unfreeze movement
+        lineText.gameObject.SetActive(true);
+        lineText.text = line.text;
+    }
+
+    private void ShowUI()
+    {
+        if (dialogueBox != null)
+            dialogueBox.SetActive(true);
+    }
+
+    private void FreezePlayer(bool freeze)
+    {
         if (clickToMoveScript != null)
-            clickToMoveScript.enabled = true;
+            clickToMoveScript.enabled = !freeze;
+    }
+
+    private void SetSpeaker(SpeakerType speaker)
+    {
+        if (npcProfilePic != null) npcProfilePic.SetActive(false);
+        if (playerProfilePic != null) playerProfilePic.SetActive(false);
+        if (narratorProfilePic != null) narratorProfilePic.SetActive(false);
+
+        switch (speaker)
+        {
+            case SpeakerType.NPC:
+                if (npcProfilePic != null) npcProfilePic.SetActive(true);
+                break;
+
+            case SpeakerType.Player:
+                if (playerProfilePic != null) playerProfilePic.SetActive(true);
+                break;
+
+            case SpeakerType.Narrator:
+                if (narratorProfilePic != null) narratorProfilePic.SetActive(true);
+                break;
+        }
     }
 
     private void SetChoicesVisible(bool visible)
     {
-        goodChoiceButton.gameObject.SetActive(visible);
-        badChoiceButton.gameObject.SetActive(visible);
+        if (goodChoiceButton != null) goodChoiceButton.gameObject.SetActive(visible);
+        if (badChoiceButton != null) badChoiceButton.gameObject.SetActive(visible);
     }
 
     private void SetContinueVisible(bool visible)
     {
-        continueButton.gameObject.SetActive(visible);
+        if (continueButton != null) continueButton.gameObject.SetActive(visible);
     }
-
-    private void SetNpcTextVisible(bool visible)
-    {
-        // Safer than clearing text; stops it rendering at all.
-        npcText.gameObject.SetActive(visible);
-    }
-
-    public bool IsOpen => dialogueBox.activeSelf;
 }
