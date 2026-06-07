@@ -808,7 +808,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 34}
+  m_AnchoredPosition: {x: 0, y: 169}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &162795290
@@ -831,9 +831,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'ClueText
-
-'
+  m_text: Clues
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -2625,7 +2623,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 310289098}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -3769,8 +3767,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PasswordDropSlot
   acceptedType: 0
-  manualInput: {fileID: 0}
-  passwordBuilder: {fileID: 0}
+  passwordBuilder: {fileID: 1203906279}
+  passwordInput: {fileID: 310289100}
   highlightImage: {fileID: 414174623}
   hoverAlpha: 0.2
 --- !u!1 &426645417
@@ -3905,8 +3903,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PasswordDropSlot
   acceptedType: 2
-  manualInput: {fileID: 0}
-  passwordBuilder: {fileID: 0}
+  passwordBuilder: {fileID: 1203906279}
+  passwordInput: {fileID: 310289100}
   highlightImage: {fileID: 430285320}
   hoverAlpha: 0.18
 --- !u!1 &431245258
@@ -6342,7 +6340,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 699660490}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6373,7 +6371,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: NAme + NUmber + Symbol
+  m_text: Name + NUmber + Symbol
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1006825b5ca28c040be7494c56ac5a37, type: 2}
   m_sharedMaterial: {fileID: -3407259083618708934, guid: 1006825b5ca28c040be7494c56ac5a37, type: 2}
@@ -10419,7 +10417,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56449c53524dc784091988b27bb19d61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleClueInventory
-  clueLibraryParent: {fileID: 1540893019}
+  clueLibraryParent: {fileID: 1699572984}
   clueCardPrefab: {fileID: 2035980810019403148, guid: ad3fd5de0cd3bc14abf5919b49fdf293, type: 3}
   feedbackText: {fileID: 0}
 --- !u!4 &1203906278
@@ -10453,7 +10451,7 @@ MonoBehaviour:
   numberSlot: {fileID: 1848921278}
   symbolSlot: {fileID: 430285322}
   passwordInput: {fileID: 310289100}
-  placeholderText: {fileID: 2091932710}
+  passwordDisplayText: {fileID: 699660492}
   correctPassword: Bowie1975!
   maxAttempts: 5
   feedbackText: {fileID: 1825137985}
@@ -13420,8 +13418,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 712, y: 179}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -1008, y: 179}
+  m_SizeDelta: {x: 300, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1555443691
 GameObject:
@@ -14229,15 +14227,15 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1699572983}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1540893019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -23.1}
   m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1699572985
@@ -14275,8 +14273,8 @@ MonoBehaviour:
   m_Spacing: 8
   m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 1
-  m_ChildControlHeight: 1
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
@@ -15794,8 +15792,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PasswordDropSlot
   acceptedType: 1
-  manualInput: {fileID: 0}
-  passwordBuilder: {fileID: 0}
+  passwordBuilder: {fileID: 1203906279}
+  passwordInput: {fileID: 310289100}
   highlightImage: {fileID: 1848921276}
   hoverAlpha: 0.18
 --- !u!1 &1906308710
@@ -15904,13 +15902,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1906308710}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.45, y: 0.26, z: -55.88}
-  m_LocalScale: {x: 25, y: 12.5, z: 12.5}
+  m_LocalRotation: {x: 0.12178269, y: 0, z: 0, w: 0.9925568}
+  m_LocalPosition: {x: 4.45, y: 0.77, z: -55.75}
+  m_LocalScale: {x: 27.000002, y: 13.500001, z: 13.500001}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 13.99, y: 0, z: 0}
 --- !u!1 &1910744818
 GameObject:
   m_ObjectHideFlags: 0
@@ -16423,14 +16421,14 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 699660491}
+  - {fileID: 310289099}
   - {fileID: 784143863}
   - {fileID: 600050905}
   - {fileID: 1825137984}
   - {fileID: 280958392}
   - {fileID: 1827956441}
   - {fileID: 943621257}
-  - {fileID: 699660491}
-  - {fileID: 310289099}
   m_Father: {fileID: 1913063906}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}

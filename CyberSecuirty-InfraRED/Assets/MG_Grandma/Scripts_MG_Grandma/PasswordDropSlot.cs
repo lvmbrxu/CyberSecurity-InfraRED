@@ -1,4 +1,3 @@
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -6,14 +5,12 @@ using UnityEngine.UI;
 
 public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
-    public event Action OnSlotChanged;
-
     [Header("Slot")]
     [SerializeField] private PasswordClueType acceptedType;
 
-    [Header("Manual Typing")]
-    [SerializeField] private TMP_InputField manualInput;
+    [Header("Password Builder")]
     [SerializeField] private SimplePasswordBuilder passwordBuilder;
+    [SerializeField] private TMP_InputField passwordInput;
 
     [Header("Highlight")]
     [SerializeField] private Image highlightImage;
@@ -50,17 +47,24 @@ public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnte
             return;
         }
 
-        ClearSlot();
+        ClearSlot(false);
 
         currentCard = card;
         currentCard.MarkAcceptedBySlot();
         currentCard.HideInSlot();
 
         SetHighlight(0f);
-        OnSlotChanged?.Invoke();
+
+        if (passwordBuilder != null)
+            passwordBuilder.RefreshPasswordFromSlots();
     }
 
     public void ClearSlot()
+    {
+        ClearSlot(true);
+    }
+
+    private void ClearSlot(bool notifyBuilder)
     {
         if (currentCard != null)
         {
@@ -68,16 +72,17 @@ public sealed class PasswordDropSlot : MonoBehaviour, IDropHandler, IPointerEnte
             currentCard = null;
         }
 
-        OnSlotChanged?.Invoke();
+        if (notifyBuilder && passwordBuilder != null)
+            passwordBuilder.RefreshPasswordFromSlots();
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (manualInput == null)
+        if (passwordInput == null)
             return;
 
-        manualInput.Select();
-        manualInput.ActivateInputField();
+        passwordInput.Select();
+        passwordInput.ActivateInputField();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
