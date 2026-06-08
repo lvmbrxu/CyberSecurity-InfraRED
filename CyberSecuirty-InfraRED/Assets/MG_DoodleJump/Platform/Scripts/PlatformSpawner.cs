@@ -6,6 +6,13 @@ public sealed class PlatformSpawner : MonoBehaviour
 {
     public static PlatformSpawner Instance { get; private set; }
 
+    // Important: clears statics between play sessions even if Domain Reload is OFF
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        Instance = null;
+    }
+
     [Header("References")]
     [SerializeField] private DoodleJumpPlayer3D_CC player;
     [SerializeField] private CharacterController playerController;
@@ -101,8 +108,24 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // Robust singleton: prevents stuck Instance across scene reloads / domain reload off
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning(
+                $"Duplicate PlatformSpawner detected. Destroying '{name}'. Existing = '{Instance.name}'.",
+                gameObject
+            );
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        // Critical: clears static when scene unloads or object is destroyed
+        if (Instance == this)
+            Instance = null;
     }
 
     private void Start()

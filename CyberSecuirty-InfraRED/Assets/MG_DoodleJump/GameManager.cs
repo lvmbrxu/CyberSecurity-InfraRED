@@ -1,8 +1,7 @@
 // GameManager.cs (updated)
-// Changes vs previous:
-// - Adds CameraBackgroundSwap reference
-// - During the fade blackout, swaps background MATERIAL (SetPhase2)
-// - Also forces platform material swap globally at that moment, then enables Phase2 ID spawning
+// Fix: singleton Instance is now robust across scene reload / Domain Reload OFF
+// - Clears Instance on destroy
+// - Resets statics on play
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -12,6 +11,13 @@ using TMPro;
 public sealed class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+
+    // Important: clears statics between play sessions even if Domain Reload is OFF
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        Instance = null;
+    }
 
     public enum GamePhase { Phase1_SecurityRun, Phase2_IdHunt, Ended }
 
@@ -70,9 +76,26 @@ public sealed class GameManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // Robust singleton: prevents stuck Instance across scene reloads / domain reload off
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning(
+                $"Duplicate GameManager detected. Destroying '{name}'. Existing = '{Instance.name}'.",
+                gameObject
+            );
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
         Time.timeScale = 1f;
+    }
+
+    private void OnDestroy()
+    {
+        // Critical: clears static when scene unloads or object is destroyed
+        if (Instance == this)
+            Instance = null;
     }
 
     private void Start()
@@ -144,7 +167,7 @@ public sealed class GameManager : MonoBehaviour
         if (!force && Mathf.Approximately(v, security01)) return;
 
         security01 = v;
-        
+
         if (securitySlider) securitySlider.value = security01;
 
         if (securityPercentText)
@@ -154,7 +177,7 @@ public sealed class GameManager : MonoBehaviour
         }
     }
 
-    // ---------------- Fall handling (both phases; security is still "life") ----------------
+    // ---------------- Fall handling ----------------
 
     private void HandleFall(float playerY)
     {

@@ -16,8 +16,8 @@ MonoBehaviour:
     :)
   choiceAText: No, thanks.
   choiceAFeedback: Smart choice!
-  choiceBText: Cookies?! I love cookies!
-  choiceBFeedback: This action will have consequences.
+  choiceBText: I LOVE COOKIES!
+  choiceBFeedback: This action will have consequences...
   affectsPlatforms: 0
   platformResultIfA: 0
   platformResultIfB: 0

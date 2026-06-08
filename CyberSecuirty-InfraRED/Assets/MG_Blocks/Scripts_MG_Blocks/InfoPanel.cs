@@ -2,18 +2,34 @@ using UnityEngine;
 
 public class InfoPanel : MonoBehaviour
 {
-    [SerializeField] GameObject infoPanel;
-    [SerializeField] private GameObject CluesUI;
-    void Start()
+    [SerializeField] private GameObject infoPanel;
+    [SerializeField] private GameObject cluesUI;
+
+    [Header("Countdown (drag StartCountdownUI here)")]
+    [SerializeField] private StartCountdownUI countdown;
+
+    private void Start()
     {
-        Time.timeScale = 0;
-        
+        Time.timeScale = 0f;
+
+        if (cluesUI != null)
+            cluesUI.SetActive(false);
     }
 
     public void StartGame()
     {
-        Time.timeScale = 1;
-        infoPanel.SetActive(false);
-        CluesUI.SetActive(true);
+        // Hide info panel UI
+        if (infoPanel != null)
+            infoPanel.SetActive(false);
+
+        // Show your in-game UI
+        if (cluesUI != null)
+            cluesUI.SetActive(true);
+
+        // Start countdown AFTER button press
+        if (countdown != null)
+            countdown.StartCountdown();
+        else
+            Time.timeScale = 1f; // fallback
     }
 }

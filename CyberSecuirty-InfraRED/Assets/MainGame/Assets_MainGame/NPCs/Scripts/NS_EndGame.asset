@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2df44287d92e8b41a9f6e303d01567d, type: 3}
+  m_Name: NS_EndGame
+  m_EditorClassIdentifier: Assembly-CSharp::NarrationSequenceSO
+  lines:
+  - speaker: 2
+    text: 'Looks like that road is blocked ... '
+    triggerEvent: 0
+    eventKey: 
+  - speaker: 2
+    text: 'Here quick go through the "Breakspace" Building, it is quicker. Hurry
+      up! '
+    triggerEvent: 0
+    eventKey: 

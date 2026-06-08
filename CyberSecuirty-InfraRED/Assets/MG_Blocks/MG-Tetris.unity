@@ -1554,6 +1554,7 @@ GameObject:
   - component: {fileID: 1247089676}
   - component: {fileID: 1247089677}
   - component: {fileID: 1247089675}
+  - component: {fileID: 1247089678}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1598,7 +1599,7 @@ MonoBehaviour:
   allowRotation: 0
   solvableHandChance: 0.72
   scaleDifficultyOverTime: 1
-  minSolvableChanceLate: 0.24
+  minSolvableChanceLate: 0.44
   pointsPerBlockPlaced: 6
   pointsPerLineClear: 220
   pointsPerCellCleared: 8
@@ -1693,9 +1694,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MinigameFinish
   minigameId: Blocks
+  goToNextScene: 0
   mainSceneBuildIndex: 4
+  nextSceneBuildIndex: 2
   returnSpawnId: FromBlocks
   mainEventId: cutscene_after_Blocks
+  playCutsceneBeforeLoad: 0
+  cutsceneClip: {fileID: 0}
 --- !u!114 &1247089677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1717,6 +1722,21 @@ MonoBehaviour:
   popBurstCount: 18
   popStartSpeed: 2
   popStartSizeCells: 0.18
+--- !u!114 &1247089678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1247089671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7a7065641ad3e7498a6a65f1e7bad2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MainMenuPlay
+  mainGameBuildIndex: 4
+  introCutscene: {fileID: 0}
+  introNarrationEventId: cutscene_after_Blocks
 --- !u!1 &1250768887
 GameObject:
   m_ObjectHideFlags: 0
@@ -2233,7 +2253,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InfoPanel
   infoPanel: {fileID: 1719093117}
-  CluesUI: {fileID: 9201145560886137154}
+  cluesUI: {fileID: 0}
+  countdown: {fileID: 0}
 --- !u!1 &1794853187
 GameObject:
   m_ObjectHideFlags: 0
@@ -4116,6 +4137,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1247089676}
         m_TargetAssemblyTypeName: MinigameFinish, Assembly-CSharp
         m_MethodName: FinishMinigame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1247089678}
+        m_TargetAssemblyTypeName: MainMenuPlay, Assembly-CSharp
+        m_MethodName: OnPlayPressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -11741,7 +11774,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

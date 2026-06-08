@@ -17,9 +17,22 @@ MonoBehaviour:
     text: Oh! Hi there, I saw you falling through that tube, the NetMenders are never
       doing their job repairing that. Welcome to the Ethernet. Do you need some help?
     triggerEvent: 0
+    eventKey: intro_narration
+  - speaker: 1
+    text: Yes, please!
+    triggerEvent: 0
+    eventKey: intro_narration
+  - speaker: 2
+    text: Well, I am here to guide you through. I will help you reach the DataTransport
+      so you can go back on your way!
+    triggerEvent: 0
     eventKey: 
   - speaker: 2
-    text: Oh! Hi there, I saw you falling through that tube, the NetMenders are never
-      doing their job repairing that. Welcome to the Ethernet. Do you need some help?
-    triggerEvent: 0
+    text: This is the map.
+    triggerEvent: 1
+    eventKey: 
+  - speaker: 2
+    text: You have to point to a location in order to be able to move. Go to the
+      SecurityBuilding to secure yourself.
+    triggerEvent: 1
     eventKey: 
