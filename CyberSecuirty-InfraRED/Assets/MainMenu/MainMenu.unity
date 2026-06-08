@@ -471,7 +471,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 0}
+  m_Texture: {fileID: 8400000, guid: 5bbc8380f0399214dbec45836ebc4d66, type: 2}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -615,7 +615,7 @@ VideoPlayer:
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
-  m_TargetTexture: {fileID: 8400000, guid: 90d65b0807b4b8d49b0ce60175b21d24, type: 2}
+  m_TargetTexture: {fileID: 8400000, guid: 5bbc8380f0399214dbec45836ebc4d66, type: 2}
   m_TimeReference: 0
   m_TargetMaterialRenderer: {fileID: 0}
   m_TargetMaterialProperty: <noninit>
@@ -655,8 +655,8 @@ MonoBehaviour:
   videoImage: {fileID: 852780281}
   fadeImage: {fileID: 318495478}
   videoPlayer: {fileID: 1294475216}
-  videoAudioSource: {fileID: 0}
-  musicSource: {fileID: 0}
+  videoAudioSource: {fileID: 1294475215}
+  musicSource: {fileID: 1347818107107142564}
   fadeOutSeconds: 0.35
   fadeInSeconds: 0.35
 --- !u!1 &1312775598
@@ -1698,6 +1698,11 @@ PrefabInstance:
 --- !u!4 &1347818107107142563 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 9064603716198051309, guid: 59724706e3977ed4fa8f7bd338fa8d8e, type: 3}
+  m_PrefabInstance: {fileID: 1347818107107142562}
+  m_PrefabAsset: {fileID: 0}
+--- !u!82 &1347818107107142564 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: 800659451484454539, guid: 59724706e3977ed4fa8f7bd338fa8d8e, type: 3}
   m_PrefabInstance: {fileID: 1347818107107142562}
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1405603952069199620

@@ -7046,13 +7046,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bb116c88feb99c449ac3d794e9801f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainSceneSpawner
-  player: {fileID: 435189510}
-  dialogueUI: {fileID: 1462346845}
-  narrationEvents:
-  - eventId: intro_narration
-    narration: {fileID: 11400000, guid: 026d018608a549e4ab0e085b05e10c06, type: 2}
-  - eventId: cutscene_after_Blocks
-    narration: {fileID: 11400000, guid: 43b23525022c19c498fbc77b38ed7b77, type: 2}
+  defaultSpawn: {fileID: 1227425929}
+  spawnPoints: []
 --- !u!1001 &435639184
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -25050,7 +25045,6 @@ MonoBehaviour:
   masterSlider: {fileID: 1996671381}
   musicSlider: {fileID: 1433368633}
   sfxSlider: {fileID: 436261281}
-  dialogueSlider: {fileID: 472352434}
   mainMixer: {fileID: 24100000, guid: 3c60ee3ca33a91748ba769c3aacf4db0, type: 2}
   exitSceneName: MainMenu
 --- !u!4 &1369344846

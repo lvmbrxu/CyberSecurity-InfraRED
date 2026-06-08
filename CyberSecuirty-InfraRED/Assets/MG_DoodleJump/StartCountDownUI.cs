@@ -5,13 +5,30 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class StartCountdownUI : MonoBehaviour
 {
+    [Header("UI")]
     [SerializeField] private TMP_Text countdownText;
-    [SerializeField] private float stepSeconds = 1f;
-    [SerializeField] private float goHoldSeconds = 0.35f;
-    [SerializeField] private Behaviour gameplayToDisable;
+
+    [Header("Timing")]
+    [SerializeField, Min(0.1f)] private float stepSeconds = 1f;
+    [SerializeField, Min(0f)] private float goHoldSeconds = 0.35f;
+
+    [Header("Gameplay Lock")]
+    [SerializeField] private Behaviour gameplayToDisable; // PlayerController script
     [SerializeField] private bool freezeTimeScale = true;
 
-    private void Start() => StartCoroutine(Run());
+    private Coroutine routine;
+
+    private void Awake()
+    {
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(false);
+    }
+
+    public void Begin()
+    {
+        if (routine != null) return;
+        routine = StartCoroutine(Run());
+    }
 
     private IEnumerator Run()
     {
@@ -31,6 +48,8 @@ public sealed class StartCountdownUI : MonoBehaviour
         if (gameplayToDisable != null) gameplayToDisable.enabled = true;
 
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+
+        routine = null;
     }
 
     private IEnumerator Show(string text, float seconds)
