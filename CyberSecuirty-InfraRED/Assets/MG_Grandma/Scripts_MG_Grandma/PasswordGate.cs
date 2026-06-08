@@ -1,89 +1,53 @@
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-public sealed class SimplePasswordGate : MonoBehaviour
+[DisallowMultipleComponent]
+public class SubmitGate : MonoBehaviour
 {
-    [Header("Password")]
-    [SerializeField] private string correctPassword = "Bowie1998!";
-    [SerializeField] private int maxAttempts = 5;
-
-    [Header("Required Clues")]
-    [SerializeField] private SimpleClueInventory clueInventory;
-    [SerializeField] private string[] requiredClueIds;
-
     [Header("UI")]
-    [SerializeField] private TMP_InputField passwordInput;
-    [SerializeField] private TMP_Text attemptsText;
-    [SerializeField] private TMP_Text feedbackText;
+    [SerializeField] private Button submitButton;
 
-    private int attemptsLeft;
-    private bool solved;
-    private bool locked;
+    [Header("What happens on successful submit")]
+    [SerializeField] private MinigameFinish minigameFinish; // drag the same object you already use
+
+    [Header("Optional")]
+    [SerializeField] private bool startDisabled = true;
+
+    private bool submitted;
 
     private void Awake()
     {
-        attemptsLeft = maxAttempts;
-        RefreshAttempts();
-        SetFeedback("Admin access required");
+        if (submitButton == null)
+            submitButton = GetComponent<Button>();
+
+        submitButton.onClick.AddListener(OnSubmitClicked);
+
+        if (startDisabled)
+            SetSubmitEnabled(false);
     }
 
-    public void SubmitPassword()
+    /// <summary>
+    /// Call this from your minigame logic when the solution is correct/valid.
+    /// </summary>
+    public void SetSubmitEnabled(bool enabled)
     {
-        if (solved || locked)
-            return;
-
-        if (!HasRequiredClues())
-        {
-            SetFeedback("Find the important clues first");
-            return;
-        }
-
-        string typedPassword = passwordInput != null ? passwordInput.text.Trim() : "";
-
-        if (typedPassword == correctPassword)
-        {
-            solved = true;
-            SetFeedback("Access granted");
-
-            return;
-        }
-
-        attemptsLeft--;
-        RefreshAttempts();
-
-        if (attemptsLeft <= 0)
-        {
-            locked = true;
-            SetFeedback("Account locked");
-            return;
-        }
-
-        SetFeedback("Wrong password");
+        if (submitButton != null)
+            submitButton.interactable = enabled;
     }
 
-    private bool HasRequiredClues()
+    private void OnSubmitClicked()
     {
-        if (clueInventory == null)
-            return true;
+        // Hard guard against spam / double-click
+        if (submitted) return;
+        submitted = true;
 
-        foreach (string clueId in requiredClueIds)
-        {
-            if (!clueInventory.HasClue(clueId))
-                return false;
-        }
+        // Lock button immediately
+        SetSubmitEnabled(false);
 
-        return true;
-    }
-
-    private void RefreshAttempts()
-    {
-        if (attemptsText != null)
-            attemptsText.text = "Attempts left: " + attemptsLeft;
-    }
-
-    private void SetFeedback(string message)
-    {
-        if (feedbackText != null)
-            feedbackText.text = message;
+        // Only proceed if we have a finisher
+        if (minigameFinish != null)
+            minigameFinish.FinishMinigame();
+        else
+            Debug.LogWarning("SubmitGate: MinigameFinish reference not set.");
     }
 }
