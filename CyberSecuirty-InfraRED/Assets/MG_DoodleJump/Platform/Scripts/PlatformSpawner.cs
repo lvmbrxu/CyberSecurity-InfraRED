@@ -108,16 +108,6 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     private void Awake()
     {
-        // Robust singleton: prevents stuck Instance across scene reloads / domain reload off
-        if (Instance != null && Instance != this)
-        {
-            Debug.LogWarning(
-                $"Duplicate PlatformSpawner detected. Destroying '{name}'. Existing = '{Instance.name}'.",
-                gameObject
-            );
-            Destroy(gameObject);
-            return;
-        }
         Instance = this;
     }
 
