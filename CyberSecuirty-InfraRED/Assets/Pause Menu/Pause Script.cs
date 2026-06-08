@@ -14,7 +14,6 @@ public class PauseMenu : MonoBehaviour
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
     [SerializeField] private Slider sfxSlider;
-    [SerializeField] private Slider dialogueSlider;
 
     [Header("Audio")]
     [SerializeField] private AudioMixer mainMixer;
@@ -110,17 +109,14 @@ public class PauseMenu : MonoBehaviour
         float master = PlayerPrefs.GetFloat("masterVolume", 1f);
         float music = PlayerPrefs.GetFloat("musicVolume", 1f);
         float sfx = PlayerPrefs.GetFloat("sfxVolume", 1f);
-        float dialogue = PlayerPrefs.GetFloat("dialogueVolume", 1f);
 
         masterSlider.value = master;
         musicSlider.value = music;
         sfxSlider.value = sfx;
-        dialogueSlider.value = dialogue;
 
         ApplyVolume("MasterVolume", master);
         ApplyVolume("MusicVolume", music);
         ApplyVolume("SFXVolume", sfx);
-        ApplyVolume("DialogueVolume", dialogue);
     }
 
     private void HookSliders()
@@ -128,7 +124,6 @@ public class PauseMenu : MonoBehaviour
         masterSlider.onValueChanged.AddListener(SetMasterVolume);
         musicSlider.onValueChanged.AddListener(SetMusicVolume);
         sfxSlider.onValueChanged.AddListener(SetSFXVolume);
-        dialogueSlider.onValueChanged.AddListener(SetDialogueVolume);
     }
 
     public void SetMasterVolume(float value)
@@ -148,13 +143,7 @@ public class PauseMenu : MonoBehaviour
         ApplyVolume("SFXVolume", value);
         PlayerPrefs.SetFloat("sfxVolume", value);
     }
-
-    public void SetDialogueVolume(float value)
-    {
-        ApplyVolume("DialogueVolume", value);
-        PlayerPrefs.SetFloat("dialogueVolume", value);
-    }
-
+    
     private void ApplyVolume(string param, float value)
     {
         float volumeDb = Mathf.Log10(Mathf.Clamp(value, 0.0001f, 1f)) * 20f;

@@ -7,8 +7,15 @@ public static class SaveDebugMenu
     [MenuItem("Tools/Save/Reset Save (Delete File)")]
     public static void ResetSave()
     {
-        SaveManager.ResetSave();
-        Debug.Log("Save reset.");
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.ClearSave();
+            Debug.Log("Save reset.");
+        }
+        else
+        {
+            Debug.LogWarning("SaveManager.Instance not found. Run the game once or ensure SaveManager exists in a boot scene.");
+        }
     }
 }
 #endif

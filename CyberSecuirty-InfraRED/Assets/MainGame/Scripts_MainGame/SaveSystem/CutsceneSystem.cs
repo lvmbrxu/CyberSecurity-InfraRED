@@ -4,9 +4,13 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
-public class CutsceneSystem : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class CutsceneSystem : MonoBehaviour
 {
     public static CutsceneSystem Instance { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => Instance = null;
 
     [Header("UI")]
     [SerializeField] private CanvasGroup videoGroup;
@@ -15,31 +19,42 @@ public class CutsceneSystem : MonoBehaviour
 
     [Header("Video")]
     [SerializeField] private VideoPlayer videoPlayer;
-    [SerializeField] private AudioSource videoAudioSource; // optional
+    [SerializeField] private AudioSource videoAudioSource;
 
-    [Header("Music to pause (ONLY music, not cutscene audio)")]
-    [SerializeField] private AudioSource musicSource; // drag your BGM source here
+    [Header("Music (optional)")]
+    [SerializeField] private AudioSource musicSource;
 
     [Header("Fade")]
-    [SerializeField] private float fadeOutSeconds = 0.35f;
-    [SerializeField] private float fadeInSeconds = 0.35f;
+    [SerializeField, Min(0f)] private float fadeOutSeconds = 0.35f;
+    [SerializeField, Min(0f)] private float fadeInSeconds = 0.35f;
 
     private bool isPlaying;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
+
+        // CRITICAL: Do NOT persist this object if it's on a minigame manager root.
+        // If you need a persistent cutscene system, place it on a dedicated bootstrap object in Main Menu scene.
 
         if (videoGroup != null) videoGroup.alpha = 0f;
-        if (fadeImage != null) SetFadeAlpha(0f);
+        SetFadeAlpha(0f);
 
         if (videoPlayer != null)
         {
             videoPlayer.playOnAwake = false;
-            videoPlayer.renderMode = VideoRenderMode.APIOnly;
+            videoPlayer.isLooping = false;
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     public void PlayAndLoadScene(VideoClip clip, int sceneBuildIndex)
@@ -48,93 +63,84 @@ public class CutsceneSystem : MonoBehaviour
 
         if (clip == null)
         {
-            SceneManager.LoadScene(sceneBuildIndex);
+            SceneManager.LoadScene(sceneBuildIndex, LoadSceneMode.Single);
             return;
         }
 
-        StartCoroutine(PlayAndLoadRoutine(clip, sceneBuildIndex));
+        StartCoroutine(CoPlayAndLoad(clip, sceneBuildIndex));
     }
 
-    private IEnumerator PlayAndLoadRoutine(VideoClip clip, int sceneBuildIndex)
+    private IEnumerator CoPlayAndLoad(VideoClip clip, int sceneBuildIndex)
     {
         isPlaying = true;
 
-        // ✅ Pause ONLY music
         if (musicSource != null && musicSource.isPlaying)
             musicSource.Pause();
 
-        // Fade to black
-        yield return Fade(0f, 1f, fadeOutSeconds);
+        yield return FadeTo(1f, fadeOutSeconds);
 
-        // Show video UI
         if (videoGroup != null) videoGroup.alpha = 1f;
 
-        // Setup video
-        videoPlayer.clip = clip;
-
-        if (videoAudioSource != null)
+        if (videoPlayer != null)
         {
-            videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
-            videoPlayer.SetTargetAudioSource(0, videoAudioSource);
+            videoPlayer.clip = clip;
+
+            if (videoAudioSource != null)
+            {
+                videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+                videoPlayer.SetTargetAudioSource(0, videoAudioSource);
+            }
+
+            videoPlayer.Prepare();
+            while (videoPlayer != null && !videoPlayer.isPrepared)
+                yield return null;
+
+            videoPlayer.Play();
         }
 
-        // Prepare
-        videoPlayer.Prepare();
-        while (!videoPlayer.isPrepared) yield return null;
+        yield return FadeTo(0f, fadeInSeconds);
 
-        if (videoImage != null)
-            videoImage.texture = videoPlayer.texture;
+        while (videoPlayer != null && videoPlayer.isPlaying)
+            yield return null;
 
-        // Play
-        videoPlayer.Play();
+        yield return FadeTo(1f, fadeOutSeconds);
 
-        // Fade from black to show video
-        yield return Fade(1f, 0f, fadeInSeconds);
-
-        // Wait until done
-        while (videoPlayer.isPlaying) yield return null;
-
-        // Fade to black at end
-        yield return Fade(0f, 1f, fadeOutSeconds);
-
-        // Hide video UI (still black)
         if (videoGroup != null) videoGroup.alpha = 0f;
         if (videoImage != null) videoImage.texture = null;
 
-        // Load next scene while black
-        yield return SceneManager.LoadSceneAsync(sceneBuildIndex);
-        yield return null;
+        yield return SceneManager.LoadSceneAsync(sceneBuildIndex, LoadSceneMode.Single);
 
-        // Fade into the new scene
-        yield return Fade(1f, 0f, fadeInSeconds);
+        yield return FadeTo(0f, fadeInSeconds);
 
-        // ✅ Resume ONLY music
         if (musicSource != null)
             musicSource.UnPause();
 
         isPlaying = false;
     }
 
-    private IEnumerator Fade(float from, float to, float seconds)
+    private IEnumerator FadeTo(float targetA, float seconds)
     {
         if (fadeImage == null) yield break;
 
         seconds = Mathf.Max(0.01f, seconds);
-        float t = 0f;
+        float startA = fadeImage.color.a;
 
-        while (t < 1f)
+        float t = 0f;
+        while (t < seconds)
         {
-            t += Time.deltaTime / seconds;
-            SetFadeAlpha(Mathf.Lerp(from, to, t));
+            t += Time.unscaledDeltaTime;
+            float a = Mathf.Lerp(startA, targetA, t / seconds);
+            SetFadeAlpha(a);
             yield return null;
         }
 
-        SetFadeAlpha(to);
+        SetFadeAlpha(targetA);
     }
 
     private void SetFadeAlpha(float a)
     {
-        var c = fadeImage.color;
+        if (fadeImage == null) return;
+        Color c = fadeImage.color;
         c.a = Mathf.Clamp01(a);
         fadeImage.color = c;
     }

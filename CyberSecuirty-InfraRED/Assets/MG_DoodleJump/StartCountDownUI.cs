@@ -5,47 +5,21 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class StartCountdownUI : MonoBehaviour
 {
-    [Header("UI")]
     [SerializeField] private TMP_Text countdownText;
-
-    [Header("Timing")]
-    [SerializeField, Min(0.1f)] private float stepSeconds = 1.0f;
-    [SerializeField, Min(0f)] private float goHoldSeconds = 0.35f;
-
-    [Header("Gameplay Lock")]
-    [Tooltip("Disable this during countdown (recommended: your click-to-move script or player controller).")]
+    [SerializeField] private float stepSeconds = 1f;
+    [SerializeField] private float goHoldSeconds = 0.35f;
     [SerializeField] private Behaviour gameplayToDisable;
-
     [SerializeField] private bool freezeTimeScale = true;
 
-    private Coroutine routine;
-    private bool running;
-
-    private void Awake()
-    {
-        if (countdownText != null)
-            countdownText.gameObject.SetActive(false);
-    }
-
-    // Call this from InfoPanel.StartGame()
-    public void StartCountdown()
-    {
-        if (running) return;
-        routine = StartCoroutine(Run());
-    }
+    private void Start() => StartCoroutine(Run());
 
     private IEnumerator Run()
     {
-        running = true;
+        if (countdownText != null) countdownText.gameObject.SetActive(true);
 
-        if (countdownText != null)
-            countdownText.gameObject.SetActive(true);
+        if (gameplayToDisable != null) gameplayToDisable.enabled = false;
 
-        // Lock gameplay
-        if (gameplayToDisable != null)
-            gameplayToDisable.enabled = false;
-
-        float prevTimeScale = Time.timeScale;
+        float prev = Time.timeScale;
         if (freezeTimeScale) Time.timeScale = 0f;
 
         yield return Show("3", stepSeconds);
@@ -53,26 +27,20 @@ public sealed class StartCountdownUI : MonoBehaviour
         yield return Show("1", stepSeconds);
         yield return Show("GO!", goHoldSeconds);
 
-        // Unlock gameplay
-        if (freezeTimeScale) Time.timeScale = (prevTimeScale <= 0f) ? 1f : prevTimeScale;
+        if (freezeTimeScale) Time.timeScale = prev;
         if (gameplayToDisable != null) gameplayToDisable.enabled = true;
 
-        if (countdownText != null)
-            countdownText.gameObject.SetActive(false);
-
-        running = false;
-        routine = null;
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
     }
 
     private IEnumerator Show(string text, float seconds)
     {
-        if (countdownText != null)
-            countdownText.text = text;
+        if (countdownText != null) countdownText.text = text;
 
         float t = 0f;
         while (t < seconds)
         {
-            t += Time.unscaledDeltaTime; // works while timeScale = 0
+            t += Time.unscaledDeltaTime;
             yield return null;
         }
     }

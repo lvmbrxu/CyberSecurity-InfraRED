@@ -1,145 +1,186 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
-public static class SaveManager
+[DisallowMultipleComponent]
+public sealed class SaveManager : MonoBehaviour
 {
-    private static readonly string FilePath =
-        Path.Combine(Application.persistentDataPath, "save.json");
+    public static SaveManager Instance { get; private set; }
 
-    private static SaveData _data;
-    private static HashSet<string> _completedSet;
-
+    // COMPAT: scripts reference this statically: SaveManager.OnSaveChanged += ...
     public static event Action OnSaveChanged;
 
-    public static SaveData Data
+    [SerializeField] private string saveKey = "SAVE_DATA";
+
+    private SaveData data;
+
+    private void Awake()
     {
-        get
+        if (Instance != null && Instance != this)
         {
-            EnsureLoaded();
-            return _data;
+            Destroy(gameObject);
+            return;
         }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        Load();
     }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    // ---------- Static API expected by your MainGame scripts ----------
 
     public static void EnsureLoaded()
     {
-        if (_data != null) return;
-
-        if (File.Exists(FilePath))
+        if (Instance == null)
         {
-            try
-            {
-                string json = File.ReadAllText(FilePath);
-                _data = JsonUtility.FromJson<SaveData>(json);
-            }
-            catch
-            {
-                _data = new SaveData();
-            }
-        }
-        else
-        {
-            _data = new SaveData();
+            Debug.LogWarning("SaveManager.Instance is null. Ensure SaveManager exists in the boot scene.");
+            return;
         }
 
-        _data.completedMinigames ??= new List<string>();
-        _data.pendingMainEvents ??= new List<string>();
-
-        _completedSet = new HashSet<string>(_data.completedMinigames);
+        if (Instance.data == null)
+            Instance.Load();
     }
 
-    public static void Save()
+    public static bool IsMinigameCompleted(string minigameId)
     {
-        EnsureLoaded();
-        _data.completedMinigames = new List<string>(_completedSet);
-
-        string json = JsonUtility.ToJson(_data, true);
-        File.WriteAllText(FilePath, json);
-
-        OnSaveChanged?.Invoke();
+        if (Instance == null) return false;
+        Instance.EnsureData();
+        return Instance.data.completedMinigames.Contains(minigameId);
     }
 
-    public static void ResetSave()
+    public static void MarkMinigameCompleted(string minigameId)
     {
-        _data = new SaveData();
-        _completedSet = new HashSet<string>(_data.completedMinigames);
+        if (Instance == null) return;
+        Instance.EnsureData();
 
-        if (File.Exists(FilePath))
-            File.Delete(FilePath);
-
-        OnSaveChanged?.Invoke();
-    }
-
-    // ---- Progress API ----
-
-    public static bool IsMinigameCompleted(string id)
-    {
-        EnsureLoaded();
-        return _completedSet.Contains(id);
-    }
-
-    public static void MarkMinigameCompleted(string id)
-    {
-        EnsureLoaded();
-        if (_completedSet.Add(id))
-            Save();
+        if (!Instance.data.completedMinigames.Contains(minigameId))
+        {
+            Instance.data.completedMinigames.Add(minigameId);
+            Instance.Save();
+        }
     }
 
     public static void SetLastMainSpawn(string spawnId)
     {
-        EnsureLoaded();
-        if (_data.lastMainSpawnId == spawnId) return;
+        if (Instance == null) return;
+        Instance.EnsureData();
 
-        _data.lastMainSpawnId = spawnId;
-        Save();
+        Instance.data.lastMainSpawnId = spawnId ?? "";
+        Instance.Save();
     }
 
-    // ---- Intro skip (optional) ----
-
-    public static void SetSkipMainIntro(bool value)
+    public static string GetLastMainSpawn()
     {
-        EnsureLoaded();
-        if (_data.skipMainIntro == value) return;
-
-        _data.skipMainIntro = value;
-        Save();
+        if (Instance == null) return "";
+        Instance.EnsureData();
+        return Instance.data.lastMainSpawnId ?? "";
     }
 
-    public static bool ShouldSkipMainIntro()
+    public static void SetSkipMainIntro(bool skip)
     {
-        EnsureLoaded();
-        return _data.skipMainIntro;
+        if (Instance == null) return;
+        Instance.EnsureData();
+
+        Instance.data.skipMainIntro = skip;
+        Instance.Save();
     }
 
-    // ---- Main event/cutscene queue ----
+    public static bool GetSkipMainIntro()
+    {
+        if (Instance == null) return false;
+        Instance.EnsureData();
+        return Instance.data.skipMainIntro;
+    }
 
     public static void EnqueueMainEvent(string eventId)
     {
-        EnsureLoaded();
-        _data.pendingMainEvents ??= new List<string>();
+        if (Instance == null) return;
+        if (string.IsNullOrEmpty(eventId)) return;
 
-        // avoid duplicates
-        if (_data.pendingMainEvents.Contains(eventId)) return;
-
-        _data.pendingMainEvents.Add(eventId);
-        Save();
+        Instance.EnsureData();
+        Instance.data.mainEventQueue.Add(eventId);
+        Instance.Save();
     }
 
     public static bool TryDequeueMainEvent(out string eventId)
     {
-        EnsureLoaded();
-        _data.pendingMainEvents ??= new List<string>();
+        eventId = null;
 
-        if (_data.pendingMainEvents.Count == 0)
+        if (Instance == null) return false;
+        Instance.EnsureData();
+
+        var q = Instance.data.mainEventQueue;
+        if (q == null || q.Count == 0) return false;
+
+        eventId = q[0];
+        q.RemoveAt(0);
+        Instance.Save();
+        return true;
+    }
+
+    // ---------- Backwards-compatible instance API (your older minigame scripts) ----------
+
+    public void MarkMinigameComplete(string minigameId) => MarkMinigameCompleted(minigameId);
+    public bool IsMinigameComplete(string minigameId) => IsMinigameCompleted(minigameId);
+
+    public void Save()
+    {
+        EnsureData();
+        string json = JsonUtility.ToJson(data);
+        PlayerPrefs.SetString(saveKey, json);
+        PlayerPrefs.Save();
+        OnSaveChanged?.Invoke();
+    }
+
+    public void Load()
+    {
+        if (!PlayerPrefs.HasKey(saveKey))
         {
-            eventId = null;
-            return false;
+            data = new SaveData();
+            OnSaveChanged?.Invoke();
+            return;
         }
 
-        eventId = _data.pendingMainEvents[0];
-        _data.pendingMainEvents.RemoveAt(0);
-        Save();
-        return true;
+        string json = PlayerPrefs.GetString(saveKey);
+        data = JsonUtility.FromJson<SaveData>(json) ?? new SaveData();
+        OnSaveChanged?.Invoke();
+    }
+
+    public void ClearSave()
+    {
+        PlayerPrefs.DeleteKey(saveKey);
+        data = new SaveData();
+        PlayerPrefs.Save();
+        OnSaveChanged?.Invoke();
+    }
+
+    public IReadOnlyList<string> GetCompletedMinigames()
+    {
+        EnsureData();
+        return data.completedMinigames;
+    }
+
+    public int GetCompletedCount()
+    {
+        EnsureData();
+        return data.completedMinigames.Count;
+    }
+
+    private void EnsureData()
+    {
+        if (data == null)
+            data = new SaveData();
+
+        if (data.completedMinigames == null)
+            data.completedMinigames = new List<string>();
+
+        if (data.mainEventQueue == null)
+            data.mainEventQueue = new List<string>();
     }
 }

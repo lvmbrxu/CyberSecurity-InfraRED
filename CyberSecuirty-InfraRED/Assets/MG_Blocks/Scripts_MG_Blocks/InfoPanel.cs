@@ -2,18 +2,18 @@ using UnityEngine;
 
 public class InfoPanel : MonoBehaviour
 {
-    [SerializeField] GameObject infoPanel;
-    [SerializeField] private GameObject CluesUI;
-    void Start()
+    [SerializeField] private GameObject infoPanel;
+    [SerializeField] private GameObject cluesUi;
+
+    private void Start()
     {
-        Time.timeScale = 0;
-        
+        Time.timeScale = 0f;
     }
 
     public void StartGame()
     {
-        Time.timeScale = 1;
-        infoPanel.SetActive(false);
-        CluesUI.SetActive(true);
+        Time.timeScale = 1f;
+        if (infoPanel != null) infoPanel.SetActive(false);
+        if (cluesUi != null) cluesUi.SetActive(true);
     }
 }
