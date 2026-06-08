@@ -1,12 +1,15 @@
+using System.Collections;
 using UnityEngine;
 
 public class MainSceneSpawner : MonoBehaviour
 {
-    [SerializeField] private Transform player; // optional (will find by tag)
+    [SerializeField] private Transform player; 
 
-    private void Start()
+    private IEnumerator Start()
     {
         SaveManager.EnsureLoaded();
+
+        yield return null;
 
         if (player == null)
         {
@@ -17,15 +20,12 @@ public class MainSceneSpawner : MonoBehaviour
         if (player == null)
         {
             Debug.LogError("[MainSceneSpawner] Player not found. Tag your player as 'Player' or assign it.");
-            return;
+            yield break;
         }
 
-        string targetId = SaveManager.GetLastMainSpawn();
-        targetId = string.IsNullOrWhiteSpace(targetId) ? "" : targetId.Trim();
-
+        string targetId = SaveManager.GetLastMainSpawn(); // now never empty
         var points = FindObjectsOfType<SpawnPoint>(true);
 
-        // Debug: show what we're trying to use
         Debug.Log($"[MainSceneSpawner] lastMainSpawnId='{targetId}' (points={points.Length})");
 
         SpawnPoint found = null;
@@ -42,15 +42,13 @@ public class MainSceneSpawner : MonoBehaviour
 
         if (found == null)
         {
-            // Print all available IDs to catch typos instantly
-            Debug.LogWarning("[MainSceneSpawner] SpawnPoint id not found. Available spawnIds:");
+            Debug.LogWarning($"[MainSceneSpawner] SpawnPoint id '{targetId}' not found. Available spawnIds:");
             foreach (var sp in points)
                 if (sp != null) Debug.Log($"  - '{sp.spawnId}'", sp);
 
-            return; // stays at default
+            yield break;
         }
 
-        // Teleport
         player.position = found.transform.position;
         player.rotation = found.transform.rotation;
 

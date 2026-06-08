@@ -4,13 +4,8 @@ using UnityEngine.Video;
 
 public class MainMenuPlay : MonoBehaviour
 {
-    [Header("Load Main Game")]
-    [SerializeField] private int mainGameBuildIndex = 4;
-
-    [Header("Intro Cutscene Video")]
+    [SerializeField] private int mainGameBuildIndex = 0;
     [SerializeField] private VideoClip introCutscene;
-
-    [Header("Main Scene Narration Event Id")]
     [SerializeField] private string introNarrationEventId = "INTRO";
 
     private bool running;
@@ -20,19 +15,40 @@ public class MainMenuPlay : MonoBehaviour
         if (running) return;
         running = true;
 
-        // Ensure SaveManager exists + loaded (won't crash if it doesn't, but it will warn)
         SaveManager.EnsureLoaded();
 
-        // We want intro narration in main
-        SaveManager.SetSkipMainIntro(false);
-
-        if (!string.IsNullOrWhiteSpace(introNarrationEventId))
+        // If they already have progress, skip intro flow
+        if (SaveManager.HasProgress())
         {
-            SaveManager.EnqueueMainEvent(introNarrationEventId.Trim());
-            Debug.Log($"[MainMenuPlay] Enqueued main event '{introNarrationEventId.Trim()}'");
+            SceneManager.LoadScene(mainGameBuildIndex);
+            return;
         }
 
-        // Play cutscene then load main (your CutsceneSystem handles load)
+        // Fresh run: enforce defaults and queue intro narration
+        SaveManager.SetLastMainSpawn("Default");
+
+        if (!string.IsNullOrWhiteSpace(introNarrationEventId))
+            SaveManager.EnqueueMainEvent(introNarrationEventId);
+
+        // Cutscene then main game
+        if (introCutscene != null && CutsceneSystem.Instance != null)
+            CutsceneSystem.Instance.PlayAndLoadScene(introCutscene, mainGameBuildIndex);
+        else
+            SceneManager.LoadScene(mainGameBuildIndex);
+    }
+
+    // Optional: separate New Game button that always resets
+    public void OnNewGamePressed()
+    {
+        if (running) return;
+        running = true;
+
+        SaveManager.EnsureLoaded();
+        SaveManager.ResetSave();
+
+        SaveManager.SetLastMainSpawn("Default");
+        SaveManager.EnqueueMainEvent(introNarrationEventId);
+
         if (introCutscene != null && CutsceneSystem.Instance != null)
             CutsceneSystem.Instance.PlayAndLoadScene(introCutscene, mainGameBuildIndex);
         else

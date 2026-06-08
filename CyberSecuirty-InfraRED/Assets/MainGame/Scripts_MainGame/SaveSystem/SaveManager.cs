@@ -6,9 +6,7 @@ using UnityEngine;
 public sealed class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
-
-    // Scripts in your project reference this statically:
-    // SaveManager.OnSaveChanged += ...
+    
     public static event Action OnSaveChanged;
 
     [SerializeField] private string saveKey = "SAVE_DATA";
@@ -33,6 +31,22 @@ public sealed class SaveManager : MonoBehaviour
     {
         if (Instance == this) Instance = null;
     }
+    
+    public static bool HasProgress()
+    {
+        if (Instance == null) return false;
+        Instance.EnsureData();
+
+        // Any of these mean they've progressed
+        if (Instance.data.completedMinigames != null && Instance.data.completedMinigames.Count > 0)
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(Instance.data.lastMainSpawnId) &&
+            !string.Equals(Instance.data.lastMainSpawnId.Trim(), "Default", System.StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
 
     // ------------------ Ensure data exists ------------------
 
@@ -46,6 +60,9 @@ public sealed class SaveManager : MonoBehaviour
 
         if (data.mainEventQueue == null)
             data.mainEventQueue = new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(data.lastMainSpawnId))
+            data.lastMainSpawnId = "Default";
     }
 
     public static void EnsureLoaded()
@@ -149,15 +166,18 @@ public sealed class SaveManager : MonoBehaviour
     {
         if (Instance == null) return;
         Instance.EnsureData();
-        Instance.data.lastMainSpawnId = spawnId ?? "";
+        spawnId = string.IsNullOrWhiteSpace(spawnId) ? "Default" : spawnId.Trim();
+        Instance.data.lastMainSpawnId = spawnId;
+
         Instance.Save();
     }
 
     public static string GetLastMainSpawn()
     {
-        if (Instance == null) return "";
+        if (Instance == null) return "Default";
         Instance.EnsureData();
-        return Instance.data.lastMainSpawnId ?? "";
+        string id = Instance.data.lastMainSpawnId;
+        return string.IsNullOrWhiteSpace(id) ? "Default" : id.Trim();
     }
 
     public static void SetSkipMainIntro(bool skip)
