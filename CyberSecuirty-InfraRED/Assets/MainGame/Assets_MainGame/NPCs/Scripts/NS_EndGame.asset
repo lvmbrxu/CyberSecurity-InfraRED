@@ -13,12 +13,8 @@ MonoBehaviour:
   m_Name: NS_EndGame
   m_EditorClassIdentifier: Assembly-CSharp::NarrationSequenceSO
   lines:
-  - speaker: 2
+  - speaker: 3
     text: 'Looks like that road is blocked ... '
-    triggerEvent: 0
-    eventKey: 
-  - speaker: 2
+  - speaker: 3
     text: 'Here quick go through the "Breakspace" Building, it is quicker. Hurry
       up! '
-    triggerEvent: 0
-    eventKey: 

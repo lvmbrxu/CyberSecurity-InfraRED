@@ -545,7 +545,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &17789990
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10684,7 +10684,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &578183798
 RectTransform:
   m_ObjectHideFlags: 0
@@ -15500,7 +15500,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &829253681
 RectTransform:
   m_ObjectHideFlags: 0
@@ -26915,9 +26915,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DialogueUI
   dialogueBox: {fileID: 1297242054}
   lineText: {fileID: 1827839775}
-  npcProfilePic: {fileID: 1827002068}
+  npc1ProfilePic: {fileID: 1827002068}
+  npc2ProfilePic: {fileID: 17789989}
   playerProfilePic: {fileID: 829253680}
-  narratorProfilePic: {fileID: 0}
+  narratorProfilePic: {fileID: 578183797}
   continueButton: {fileID: 1034380732}
   goodChoiceButton: {fileID: 1618138899}
   badChoiceButton: {fileID: 743422332}
@@ -34407,7 +34408,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1827002069
 RectTransform:
   m_ObjectHideFlags: 0
@@ -40343,19 +40344,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.613296
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.613296
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.351949
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.351949
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -40363,7 +40364,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -149.7
+      value: -180
       objectReference: {fileID: 0}
     - target: {fileID: 6346598623700842049, guid: f196ec7a48850104e89c7861ae78e23b, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z

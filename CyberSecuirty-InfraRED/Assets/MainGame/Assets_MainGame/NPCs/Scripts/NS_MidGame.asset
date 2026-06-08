@@ -13,8 +13,6 @@ MonoBehaviour:
   m_Name: NS_MidGame
   m_EditorClassIdentifier: Assembly-CSharp::NarrationSequenceSO
   lines:
-  - speaker: 2
+  - speaker: 3
     text: 'Phewwww, you did it! That was close! Now you need to run for that bus
       if you want to get back. Keep going south! '
-    triggerEvent: 0
-    eventKey: 

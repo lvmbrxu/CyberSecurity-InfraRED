@@ -2,36 +2,37 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+public enum SpeakerType { NPC1, NPC2, Player, Narrator }
+
 public class DialogueUI : MonoBehaviour
 {
-    public System.Action Closed; // ✅ camera restore hooks into this
+    public System.Action Closed;
 
     [Header("Core UI")]
-    public GameObject dialogueBox; // DialogueBox
-    public TMP_Text lineText;      // NpcText (TMP) - can be used for narrator too
+    public GameObject dialogueBox;
+    public TMP_Text lineText;
 
     [Header("Profile Pics")]
-    public GameObject npcProfilePic;      // ProfilePicPassword
-    public GameObject playerProfilePic;   // ProfilePicPlayer
-    public GameObject narratorProfilePic; // optional
+    public GameObject npc1ProfilePic;     // NPC 1 portrait
+    public GameObject npc2ProfilePic;     // NPC 2 portrait
+    public GameObject playerProfilePic;   // Player portrait
+    public GameObject narratorProfilePic; // Narrator portrait (optional)
 
     [Header("Buttons")]
-    public Button continueButton;       // ContinueButton (stretch full panel, alpha 0)
-    public Button goodChoiceButton;     // ButtonGoodChoice
-    public Button badChoiceButton;      // ButtonBadChoice
-    public TMP_Text goodChoiceLabel;    // ButtonGoodChoice/Text (TMP)
-    public TMP_Text badChoiceLabel;     // ButtonBadChoice/Text (TMP)
+    public Button continueButton;
+    public Button goodChoiceButton;
+    public Button badChoiceButton;
+    public TMP_Text goodChoiceLabel;
+    public TMP_Text badChoiceLabel;
 
     [Header("State")]
     public GameStateSO gameState;
 
     [Header("Freeze Player (Click-to-Move script)")]
-    public MonoBehaviour clickToMoveScript; // drag your click-to-move component here
+    public MonoBehaviour clickToMoveScript;
 
-    // ---- Choice dialogue data ----
     private DialogueDataSO choiceData;
 
-    // ---- Narration data ----
     private NarrationSequenceSO narrationSequence;
     private int narrationIndex;
 
@@ -47,7 +48,7 @@ public class DialogueUI : MonoBehaviour
         goodChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: true));
         badChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: false));
 
-        Hide(); // start hidden
+        Hide();
     }
 
     // =========================
@@ -65,13 +66,14 @@ public class DialogueUI : MonoBehaviour
         FreezePlayer(true);
 
         choiceStep = ChoiceStep.NpcLine;
+        
+        SetSpeaker(choiceData.npcSpeaker);
 
-        SetSpeaker(SpeakerType.NPC);
         lineText.gameObject.SetActive(true);
         lineText.text = choiceData.npcLine;
 
         SetChoicesVisible(false);
-        SetContinueVisible(true); // click anywhere
+        SetContinueVisible(true);
     }
 
     public void OpenNarration(NarrationSequenceSO sequence)
@@ -108,7 +110,7 @@ public class DialogueUI : MonoBehaviour
         if (lineText != null)
             lineText.gameObject.SetActive(true);
 
-        Closed?.Invoke(); // ✅ camera swap restores here
+        Closed?.Invoke();
     }
 
     public bool IsOpen => dialogueBox != null && dialogueBox.activeSelf;
@@ -143,13 +145,11 @@ public class DialogueUI : MonoBehaviour
 
                 SetSpeaker(SpeakerType.Player);
 
-                // Hide text during the choice phase (your requirement)
                 lineText.gameObject.SetActive(false);
 
                 goodChoiceLabel.text = choiceData.choiceAText;
-                badChoiceLabel.text  = choiceData.choiceBText;
+                badChoiceLabel.text = choiceData.choiceBText;
 
-                // IMPORTANT: disable continue so it doesn't block option clicks
                 SetContinueVisible(false);
                 SetChoicesVisible(true);
             }
@@ -166,6 +166,7 @@ public class DialogueUI : MonoBehaviour
         if (choiceData == null) return;
         if (choiceStep != ChoiceStep.Choosing) return;
 
+        // Apply outcomes
         if (choiceData.affectsPlatforms)
             gameState.platformGlitchMode = isA ? choiceData.platformResultIfA : choiceData.platformResultIfB;
 
@@ -174,13 +175,14 @@ public class DialogueUI : MonoBehaviour
 
         choiceStep = ChoiceStep.NpcFeedback;
 
-        SetSpeaker(SpeakerType.NPC);
+        // Feedback should come from the same NPC that started the dialogue
+        SetSpeaker(choiceData.npcSpeaker);
 
         lineText.gameObject.SetActive(true);
         lineText.text = isA ? choiceData.choiceAFeedback : choiceData.choiceBFeedback;
 
         SetChoicesVisible(false);
-        SetContinueVisible(true); // click anywhere to close
+        SetContinueVisible(true);
     }
 
     private void ShowNarrationLine()
@@ -207,14 +209,19 @@ public class DialogueUI : MonoBehaviour
 
     private void SetSpeaker(SpeakerType speaker)
     {
-        if (npcProfilePic != null) npcProfilePic.SetActive(false);
+        if (npc1ProfilePic != null) npc1ProfilePic.SetActive(false);
+        if (npc2ProfilePic != null) npc2ProfilePic.SetActive(false);
         if (playerProfilePic != null) playerProfilePic.SetActive(false);
         if (narratorProfilePic != null) narratorProfilePic.SetActive(false);
 
         switch (speaker)
         {
-            case SpeakerType.NPC:
-                if (npcProfilePic != null) npcProfilePic.SetActive(true);
+            case SpeakerType.NPC1:
+                if (npc1ProfilePic != null) npc1ProfilePic.SetActive(true);
+                break;
+
+            case SpeakerType.NPC2:
+                if (npc2ProfilePic != null) npc2ProfilePic.SetActive(true);
                 break;
 
             case SpeakerType.Player:

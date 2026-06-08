@@ -3,15 +3,22 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "CyberGame/Dialogue Data", fileName = "DialogueData")]
 public class DialogueDataSO : ScriptableObject
 {
-    [TextArea(2, 5)] public string npcLine;
+    [Header("Who is this NPC?")]
+    public SpeakerType npcSpeaker = SpeakerType.NPC1;
+
+    [Header("NPC Opening Line")]
+    [TextArea(2, 5)]
+    public string npcLine;
 
     [Header("Choice A")]
     public string choiceAText;
-    [TextArea(2, 5)] public string choiceAFeedback;
+    [TextArea(2, 5)]
+    public string choiceAFeedback;
 
     [Header("Choice B")]
     public string choiceBText;
-    [TextArea(2, 5)] public string choiceBFeedback;
+    [TextArea(2, 5)]
+    public string choiceBFeedback;
 
     [Header("What this dialogue affects")]
     public bool affectsPlatforms;

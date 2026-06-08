@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b27b494d47fdbc541a4e5879557200ac, type: 3}
   m_Name: CookieDialogue
   m_EditorClassIdentifier: Assembly-CSharp::DialogueDataSO
+  npcSpeaker: 1
   npcLine: Hi there! Would you mind accepting all the cookies? they are delicious!
     :)
   choiceAText: No, thanks.
