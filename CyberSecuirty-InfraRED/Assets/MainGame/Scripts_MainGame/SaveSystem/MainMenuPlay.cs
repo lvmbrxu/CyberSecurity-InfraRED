@@ -5,13 +5,13 @@ using UnityEngine.Video;
 public class MainMenuPlay : MonoBehaviour
 {
     [Header("Load Main Game")]
-    [SerializeField] private int mainGameBuildIndex = 1;
+    [SerializeField] private int mainGameBuildIndex = 4;
 
     [Header("Intro Cutscene Video")]
     [SerializeField] private VideoClip introCutscene;
 
     [Header("Main Scene Narration Event Id")]
-    [SerializeField] private string introNarrationEventId = "intro_narration";
+    [SerializeField] private string introNarrationEventId = "INTRO";
 
     private bool running;
 
@@ -20,22 +20,22 @@ public class MainMenuPlay : MonoBehaviour
         if (running) return;
         running = true;
 
-        // We WANT the intro narration to play in MainGame
+        // Ensure SaveManager exists + loaded (won't crash if it doesn't, but it will warn)
+        SaveManager.EnsureLoaded();
+
+        // We want intro narration in main
         SaveManager.SetSkipMainIntro(false);
 
-        // Queue the narration event once (played by MainSceneSpawner in MainGame)
         if (!string.IsNullOrWhiteSpace(introNarrationEventId))
-            SaveManager.EnqueueMainEvent(introNarrationEventId);
+        {
+            SaveManager.EnqueueMainEvent(introNarrationEventId.Trim());
+            Debug.Log($"[MainMenuPlay] Enqueued main event '{introNarrationEventId.Trim()}'");
+        }
 
-        // Play cutscene, then load MainGame without flashing menu
+        // Play cutscene then load main (your CutsceneSystem handles load)
         if (introCutscene != null && CutsceneSystem.Instance != null)
-        {
             CutsceneSystem.Instance.PlayAndLoadScene(introCutscene, mainGameBuildIndex);
-        }
         else
-        {
-            // No cutscene system (or no clip) -> go straight to MainGame
             SceneManager.LoadScene(mainGameBuildIndex);
-        }
     }
 }

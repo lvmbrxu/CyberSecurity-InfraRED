@@ -31,8 +31,22 @@ public class DialogueUI : MonoBehaviour
     [Header("Freeze Player (Click-to-Move script)")]
     public MonoBehaviour clickToMoveScript;
 
+    [Header("Narration Camera Cue (optional)")]
+    [Tooltip("If ON, will swap camera when narration reaches the chosen line index.")]
+    [SerializeField] private bool enableNarrationCameraCue = false;
+
+    [Tooltip("Drag your CameraPrioritySwap_CM3 here.")]
+    [SerializeField] private CameraPrioritySwap_CM3 narrationCameraSwap;
+
+    [Tooltip("0 = first line, 1 = second line, 2 = third line...")]
+    [SerializeField] private int cameraCueLineIndex = 1; // after 2nd element = 1 (0-based)
+
+    private bool cameraCueFired;
+
+    // ---- Choice dialogue data ----
     private DialogueDataSO choiceData;
 
+    // ---- Narration data ----
     private NarrationSequenceSO narrationSequence;
     private int narrationIndex;
 
@@ -48,7 +62,7 @@ public class DialogueUI : MonoBehaviour
         goodChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: true));
         badChoiceButton.onClick.AddListener(() => OnChoiceClicked(isA: false));
 
-        Hide();
+        Hide(); // start hidden
     }
 
     // =========================
@@ -66,7 +80,7 @@ public class DialogueUI : MonoBehaviour
         FreezePlayer(true);
 
         choiceStep = ChoiceStep.NpcLine;
-        
+
         SetSpeaker(choiceData.npcSpeaker);
 
         lineText.gameObject.SetActive(true);
@@ -84,6 +98,9 @@ public class DialogueUI : MonoBehaviour
         narrationSequence = sequence;
         narrationIndex = 0;
 
+        // reset cue each time narration starts
+        cameraCueFired = false;
+
         ShowUI();
         FreezePlayer(true);
 
@@ -95,6 +112,10 @@ public class DialogueUI : MonoBehaviour
 
     public void Hide()
     {
+        // restore camera if we swapped it during narration
+        if (enableNarrationCameraCue && narrationCameraSwap != null && cameraCueFired)
+            narrationCameraSwap.Restore();
+
         mode = Mode.None;
         choiceStep = ChoiceStep.Hidden;
 
@@ -145,11 +166,13 @@ public class DialogueUI : MonoBehaviour
 
                 SetSpeaker(SpeakerType.Player);
 
+                // Hide text during choices
                 lineText.gameObject.SetActive(false);
 
                 goodChoiceLabel.text = choiceData.choiceAText;
                 badChoiceLabel.text = choiceData.choiceBText;
 
+                // disable continue so it doesn't block option clicks
                 SetContinueVisible(false);
                 SetChoicesVisible(true);
             }
@@ -175,7 +198,7 @@ public class DialogueUI : MonoBehaviour
 
         choiceStep = ChoiceStep.NpcFeedback;
 
-        // Feedback should come from the same NPC that started the dialogue
+        // Feedback from same NPC
         SetSpeaker(choiceData.npcSpeaker);
 
         lineText.gameObject.SetActive(true);
@@ -193,6 +216,16 @@ public class DialogueUI : MonoBehaviour
 
         lineText.gameObject.SetActive(true);
         lineText.text = line.text;
+
+        // 🔥 Camera cue: trigger once at chosen narration line index
+        if (enableNarrationCameraCue &&
+            !cameraCueFired &&
+            narrationCameraSwap != null &&
+            narrationIndex == cameraCueLineIndex)
+        {
+            cameraCueFired = true;
+            narrationCameraSwap.ActivateTargetCamera();
+        }
     }
 
     private void ShowUI()
@@ -219,15 +252,12 @@ public class DialogueUI : MonoBehaviour
             case SpeakerType.NPC1:
                 if (npc1ProfilePic != null) npc1ProfilePic.SetActive(true);
                 break;
-
             case SpeakerType.NPC2:
                 if (npc2ProfilePic != null) npc2ProfilePic.SetActive(true);
                 break;
-
             case SpeakerType.Player:
                 if (playerProfilePic != null) playerProfilePic.SetActive(true);
                 break;
-
             case SpeakerType.Narrator:
                 if (narratorProfilePic != null) narratorProfilePic.SetActive(true);
                 break;

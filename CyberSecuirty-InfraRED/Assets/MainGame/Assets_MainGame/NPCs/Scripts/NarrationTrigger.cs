@@ -1,54 +1,53 @@
 using UnityEngine;
 
-public class NarrationTrigger_CameraSwap_CM3 : MonoBehaviour
+public class NarrationTrigger : MonoBehaviour
 {
-    public DialogueUI dialogueUI;
-    public NarrationSequenceSO sequence;
+    [Header("Event Trigger (SaveManager)")]
+    [SerializeField] private string triggerEventId = "INTRO";
 
-    [Header("Camera swap (CM3)")]
-    public bool swapCamera = true;
-    public CameraPrioritySwap_CM3 cameraSwap;
+    [Header("Dialogue")]
+    [SerializeField] private DialogueUI dialogueUI;
+    [SerializeField] private NarrationSequenceSO sequence;
 
     [Header("Trigger Behavior")]
-    public bool triggerOnce = true;
-    public bool disableAfterTrigger = true;
+    [SerializeField] private bool triggerOnce = true;
+    [SerializeField] private bool disableAfterTrigger = true;
 
     private bool triggered;
 
-    private void Reset()
+    private void Start()
     {
-        var col = GetComponent<Collider>();
-        if (col != null) col.isTrigger = true;
+        // Ensure data is loaded before checking
+        SaveManager.EnsureLoaded();
+        TryTrigger();
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void TryTrigger()
     {
         if (triggerOnce && triggered) return;
-        if (!other.CompareTag("Player")) return;
 
-        if (dialogueUI == null || sequence == null) return;
-        if (dialogueUI.IsOpen) return;
+        string key = string.IsNullOrWhiteSpace(triggerEventId) ? "" : triggerEventId.Trim();
+        if (string.IsNullOrEmpty(key)) return;
+
+        if (!SaveManager.HasMainEvent(key))
+        {
+            Debug.Log($"[NarrationTrigger] Event '{key}' not found.");
+            return;
+        }
+
+        Debug.Log($"[NarrationTrigger] Event '{key}' found -> playing narration");
 
         triggered = true;
 
-        if (swapCamera && cameraSwap != null)
-            cameraSwap.ActivateTargetCamera();
+        // consume the event so it plays once
+        SaveManager.RemoveMainEvent(key);
 
-        dialogueUI.Closed -= OnDialogueClosed;
-        dialogueUI.Closed += OnDialogueClosed;
-
-        dialogueUI.OpenNarration(sequence);
+        if (dialogueUI != null && sequence != null)
+            dialogueUI.OpenNarration(sequence);
+        else
+            Debug.LogError("[NarrationTrigger] dialogueUI or sequence missing.");
 
         if (disableAfterTrigger)
             gameObject.SetActive(false);
-    }
-
-    private void OnDialogueClosed()
-    {
-        if (dialogueUI != null)
-            dialogueUI.Closed -= OnDialogueClosed;
-
-        if (swapCamera && cameraSwap != null)
-            cameraSwap.Restore();
     }
 }

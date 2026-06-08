@@ -505,7 +505,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuPlay
   mainGameBuildIndex: 4
   introCutscene: {fileID: 32900000, guid: 6626a4e9ba211ac4e8cddf63b7e83010, type: 3}
-  introNarrationEventId: intro_narration
+  introNarrationEventId: INTRO
 --- !u!82 &1294475215
 AudioSource:
   m_ObjectHideFlags: 0
@@ -659,6 +659,19 @@ MonoBehaviour:
   musicSource: {fileID: 1347818107107142564}
   fadeOutSeconds: 0.35
   fadeInSeconds: 0.35
+--- !u!114 &1294475218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1294475213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46d4e5d5440b3f54d97a0a9c18e21a20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveManager
+  saveKey: SAVE_DATA
 --- !u!1 &1312775598
 GameObject:
   m_ObjectHideFlags: 0
@@ -3662,6 +3675,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 63889292269373774, guid: 4a8aeddf56260e64a886444963e33cca, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1294475215}
+    - targetCorrespondingSourceObject: {fileID: 63889292269373774, guid: 4a8aeddf56260e64a886444963e33cca, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1294475218}
   m_SourcePrefab: {fileID: 100100000, guid: 4a8aeddf56260e64a886444963e33cca, type: 3}
 --- !u!224 &7712003841464236424
 RectTransform:

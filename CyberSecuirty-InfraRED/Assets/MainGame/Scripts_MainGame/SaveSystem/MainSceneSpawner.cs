@@ -1,32 +1,59 @@
-// MainSceneSpawner.cs
 using UnityEngine;
 
 public class MainSceneSpawner : MonoBehaviour
 {
-    public static string NextSpawnId;
+    [SerializeField] private Transform player; // optional (will find by tag)
 
-    [SerializeField] private Transform defaultSpawn;
-    [SerializeField] private SpawnPoint[] spawnPoints;
-
-    void Start()
+    private void Start()
     {
-        Transform spawn = defaultSpawn;
+        SaveManager.EnsureLoaded();
 
-        if (!string.IsNullOrEmpty(NextSpawnId))
+        if (player == null)
         {
-            foreach (var sp in spawnPoints)
-            {
-                if (sp != null && sp.spawnId == NextSpawnId)
-                {
-                    spawn = sp.transform;
-                    break;
-                }
-            }
-            NextSpawnId = null;
+            var p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) player = p.transform;
         }
 
-        var player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null && spawn != null)
-            player.transform.position = spawn.position;
+        if (player == null)
+        {
+            Debug.LogError("[MainSceneSpawner] Player not found. Tag your player as 'Player' or assign it.");
+            return;
+        }
+
+        string targetId = SaveManager.GetLastMainSpawn();
+        targetId = string.IsNullOrWhiteSpace(targetId) ? "" : targetId.Trim();
+
+        var points = FindObjectsOfType<SpawnPoint>(true);
+
+        // Debug: show what we're trying to use
+        Debug.Log($"[MainSceneSpawner] lastMainSpawnId='{targetId}' (points={points.Length})");
+
+        SpawnPoint found = null;
+        foreach (var sp in points)
+        {
+            if (sp == null || string.IsNullOrWhiteSpace(sp.spawnId)) continue;
+
+            if (string.Equals(sp.spawnId.Trim(), targetId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                found = sp;
+                break;
+            }
+        }
+
+        if (found == null)
+        {
+            // Print all available IDs to catch typos instantly
+            Debug.LogWarning("[MainSceneSpawner] SpawnPoint id not found. Available spawnIds:");
+            foreach (var sp in points)
+                if (sp != null) Debug.Log($"  - '{sp.spawnId}'", sp);
+
+            return; // stays at default
+        }
+
+        // Teleport
+        player.position = found.transform.position;
+        player.rotation = found.transform.rotation;
+
+        Debug.Log($"[MainSceneSpawner] Spawned at '{found.spawnId}'", found);
     }
 }

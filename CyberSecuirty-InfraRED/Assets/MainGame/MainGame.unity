@@ -3900,12 +3900,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cef613d6671bef479be32b76219b926, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NarrationTrigger_CameraSwap_CM3
+  triggerEventId: end_narrator
   dialogueUI: {fileID: 1462346845}
   sequence: {fileID: 11400000, guid: 4d3b9255f9a45fd40b3fdbf18fb6d395, type: 2}
-  swapCamera: 0
-  cameraSwap: {fileID: 0}
   triggerOnce: 1
-  disableAfterTrigger: 1
+  disableAfterTrigger: 0
 --- !u!65 &243987430
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6926,7 +6925,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -9013,8 +9012,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 504839187}
-  - component: {fileID: 504839186}
-  - component: {fileID: 504839185}
+  - component: {fileID: 504839188}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -9022,34 +9020,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &504839185
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 504839184}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c69052013a1a7941ab703b8ef421b6b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Dialogue.DialogueService
-  player: {fileID: 1753262189}
---- !u!114 &504839186
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 504839184}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 168f9fd4d1e4b2747b62b926f587a4a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Dialogue.DialoguePresenter
-  rootPanel: {fileID: 0}
-  subtitleText: {fileID: 0}
-  speakerText: {fileID: 0}
 --- !u!4 &504839187
 Transform:
   m_ObjectHideFlags: 0
@@ -9068,6 +9038,23 @@ Transform:
   - {fileID: 1506274421}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &504839188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 504839184}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cef613d6671bef479be32b76219b926, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NarrationTrigger_CameraSwap_CM3
+  triggerEventId: INTRO
+  dialogueUI: {fileID: 1462346845}
+  sequence: {fileID: 11400000, guid: 026d018608a549e4ab0e085b05e10c06, type: 2}
+  triggerOnce: 1
+  disableAfterTrigger: 0
 --- !u!4 &506043853 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5580480935290800384, guid: 9da3882b7f50e2647beca35411712e39, type: 3}
@@ -21448,7 +21435,7 @@ MonoBehaviour:
   swapCamera: 1
   cameraSwap: {fileID: 1154659072}
   triggerOnce: 1
-  disableAfterTrigger: 1
+  disableAfterTrigger: 0
 --- !u!114 &1154659072
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26246,7 +26233,7 @@ Transform:
   m_GameObject: {fileID: 1439499974}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 237.07, y: 0, z: -13.86}
+  m_LocalPosition: {x: 237.97, y: 0, z: -13.86}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -26920,6 +26907,9 @@ MonoBehaviour:
   badChoiceLabel: {fileID: 477638165}
   gameState: {fileID: 11400000, guid: a750a041cd92e604682179a4e7cba60a, type: 2}
   clickToMoveScript: {fileID: 435189509}
+  enableNarrationCameraCue: 1
+  narrationCameraSwap: {fileID: 0}
+  cameraCueLineIndex: 1
 --- !u!1001 &1464528400
 PrefabInstance:
   m_ObjectHideFlags: 0
