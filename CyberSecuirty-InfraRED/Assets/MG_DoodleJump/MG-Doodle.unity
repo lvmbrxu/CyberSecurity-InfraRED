@@ -7422,8 +7422,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InfoPanel
   infoPanel: {fileID: 1102793044}
-  cluesUI: {fileID: 0}
-  countdown: {fileID: 0}
+  CluesUI: {fileID: 1788614633}
 --- !u!1001 &1115696350
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8900,7 +8899,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1788614635
 MonoBehaviour:
   m_ObjectHideFlags: 0
