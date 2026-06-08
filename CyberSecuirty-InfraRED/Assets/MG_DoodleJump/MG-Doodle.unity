@@ -8894,7 +8894,7 @@ GameObject:
   - component: {fileID: 1788614646}
   - component: {fileID: 1788614648}
   m_Layer: 0
-  m_Name: GameManager
+  m_Name: DoodleJumpManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
