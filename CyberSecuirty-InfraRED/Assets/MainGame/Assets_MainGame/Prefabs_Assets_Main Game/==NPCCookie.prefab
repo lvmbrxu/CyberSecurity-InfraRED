@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5746169966689287387}
   - component: {fileID: 518941493759453690}
-  - component: {fileID: 4487003500589077598}
   - component: {fileID: 330494451930902114}
   m_Layer: 0
   m_Name: ==NPCCookie
@@ -56,24 +55,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.308384, y: 1.742665, z: 0.7073717}
   m_Center: {x: 0.0021457672, y: 1.0475749, z: -0.010354519}
---- !u!114 &4487003500589077598
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5933159601883094785}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b422f6c68339c448a0f724f9ca764c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NPCInteract
-  waypoints: []
-  player: {fileID: 0}
-  detectionRange: 7
-  loseRange: 3
-  returnDelay: 2
-  dialogueUI: {fileID: 0}
 --- !u!195 &330494451930902114
 NavMeshAgent:
   m_ObjectHideFlags: 0

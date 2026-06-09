@@ -38,13 +38,33 @@ public class PopupSpawner : MonoBehaviour
         alive.Add(go);
 
         var rt = go.GetComponent<RectTransform>();
-        if (rt != null)
-        {
-            Vector2 size = spawnArea.rect.size;
-            rt.anchoredPosition = new Vector2(
-                Random.Range(-size.x * 0.5f, size.x * 0.5f),
-                Random.Range(-size.y * 0.5f, size.y * 0.5f)
-            );
-        }
+        if (rt == null) return;
+
+        // Force popup to use centered anchors so anchoredPosition is predictable
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+
+        // Calculate bounds so the whole popup stays inside spawnArea
+        Vector2 areaSize = spawnArea.rect.size;
+        Vector2 popupSize = rt.rect.size;
+
+        float halfW = areaSize.x * 0.5f;
+        float halfH = areaSize.y * 0.5f;
+
+        float px = popupSize.x * 0.5f;
+        float py = popupSize.y * 0.5f;
+
+        float minX = -halfW + px;
+        float maxX =  halfW - px;
+        float minY = -halfH + py;
+        float maxY =  halfH - py;
+
+        // If popup is larger than the area in one axis, just center it on that axis
+        float x = (minX > maxX) ? 0f : Random.Range(minX, maxX);
+        float y = (minY > maxY) ? 0f : Random.Range(minY, maxY);
+
+        rt.anchoredPosition = new Vector2(x, y);
     }
+    
 }

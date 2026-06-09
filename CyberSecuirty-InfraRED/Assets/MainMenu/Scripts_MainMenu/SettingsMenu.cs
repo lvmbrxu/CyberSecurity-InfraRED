@@ -13,10 +13,19 @@ public class SettingsMenu : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioMixer mainMixer;
 
+    //LambruVladut-Andrei added audio manager
     private void Start()
     {
-        LoadAndApplySettings();
-        HookSliders();
+        var a = AudioSettingsManager.Instance;
+        if (a == null) return;
+
+        masterSlider.SetValueWithoutNotify(a.Master01);
+        musicSlider.SetValueWithoutNotify(a.Music01);
+        sfxSlider.SetValueWithoutNotify(a.Sfx01);
+
+        masterSlider.onValueChanged.AddListener(a.SetMaster01);
+        musicSlider.onValueChanged.AddListener(a.SetMusic01);
+        sfxSlider.onValueChanged.AddListener(a.SetSfx01);
     }
 
     private void LoadAndApplySettings()

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 184484991360145219}
   - component: {fileID: 1836478363204020623}
   - component: {fileID: 2693462135353528810}
-  - component: {fileID: 6587112899611070907}
+  - component: {fileID: 4268325332934855629}
   m_Layer: 0
   m_Name: ==NPCShield
   m_TagString: Untagged
@@ -78,7 +78,7 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!114 &6587112899611070907
+--- !u!114 &4268325332934855629
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -87,15 +87,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 4525520833320783672}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b422f6c68339c448a0f724f9ca764c5, type: 3}
+  m_Script: {fileID: 11500000, guid: 87c78d46589e76447b8f2d3d2f3ca5c9, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NPCInteract
-  waypoints: []
-  player: {fileID: 0}
-  detectionRange: 7
-  loseRange: 3
-  returnDelay: 2
-  dialogueUI: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::IdleFidgetTimer
+  animator: {fileID: 3682290910138408662}
+  triggerName: IdleFidget
+  baseInterval: 10
+  randomJitter: 2
+  onlyWhenIdle: 0
+  movementThreshold: 0.05
 --- !u!1001 &170032344788077417
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -106,15 +106,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
       propertyPath: m_LocalScale.x
-      value: 86.8
+      value: 100.00001
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
       propertyPath: m_LocalScale.y
-      value: 86.8
+      value: 100.00001
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
       propertyPath: m_LocalScale.z
-      value: 86.8
+      value: 100.00001
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
       propertyPath: m_LocalPosition.x
@@ -167,10 +167,40 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3682290910138408662}
   m_SourcePrefab: {fileID: 100100000, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
 --- !u!4 &420711602599685250 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
   m_PrefabInstance: {fileID: 170032344788077417}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1053132396106790456 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 343ecc28636dd7646a5e6945b77a38a1, type: 3}
+  m_PrefabInstance: {fileID: 170032344788077417}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &3682290910138408662
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1053132396106790456}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f7f3f8a05f2d693479b72c22a0c32052, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

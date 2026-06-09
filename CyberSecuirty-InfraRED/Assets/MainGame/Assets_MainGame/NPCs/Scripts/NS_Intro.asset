@@ -16,13 +16,28 @@ MonoBehaviour:
   - speaker: 3
     text: Oh! Hi there, I saw you falling through that tube, the NetMenders are never
       doing their job repairing that. Welcome to the Ethernet. Do you need some help?
+    activateCameraSwap: 0
+    restoreCameraSwap: 0
+    marker: 
   - speaker: 2
     text: Yes, please!
+    activateCameraSwap: 0
+    restoreCameraSwap: 0
+    marker: 
   - speaker: 3
     text: Well, I am here to guide you through. I will help you reach the DataTransport
       so you can go back on your way!
+    activateCameraSwap: 0
+    restoreCameraSwap: 0
+    marker: 
   - speaker: 3
     text: This is the map.
+    activateCameraSwap: 1
+    restoreCameraSwap: 0
+    marker: 
   - speaker: 3
     text: You have to point to a location in order to be able to move. Go to the
       SecurityBuilding to secure yourself.
+    activateCameraSwap: 0
+    restoreCameraSwap: 0
+    marker: 

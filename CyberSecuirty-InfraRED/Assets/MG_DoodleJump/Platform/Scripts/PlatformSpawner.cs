@@ -41,7 +41,7 @@ public sealed class PlatformSpawner : MonoBehaviour
     [SerializeField] private float driftBias = 0.255f;
     [SerializeField] private float maxStepX = 17f;
 
-    [Header("Lanes")]
+    [Header("Lanes / Hint platforms")]
     [SerializeField] private int extraPlatformsPerBeat = 1;
     [SerializeField] private float laneMinXSpacing = 5.09f;
     [SerializeField] private float laneOffsetY = 0.8f;
@@ -55,6 +55,15 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     [Header("Orientation")]
     [SerializeField] private Vector3 platformEuler = Vector3.zero;
+
+    [Header("Consequence (NPC choice)")]
+    [SerializeField] private GameStateSO gameState;
+
+    [Header("Moving Platforms")]
+    [SerializeField, Range(0f, 1f)] private float moveChanceNormal = 0.0f;
+    [SerializeField, Range(0f, 1f)] private float moveChanceConsequence = 0.45f;
+    [SerializeField] private float moveAmplitude = 2.2f;
+    [SerializeField] private float moveSpeed = 1.4f;
 
     private bool stopped;
     private bool phase2;
@@ -73,6 +82,9 @@ public sealed class PlatformSpawner : MonoBehaviour
     private int idsSpawned;
     private int beatsSinceLastId;
     private float lastIdY = float.NegativeInfinity;
+
+    // Allows forcing moving platforms (optional)
+    private bool forceMoveAll;
 
     private void Awake()
     {
@@ -142,6 +154,17 @@ public sealed class PlatformSpawner : MonoBehaviour
 
     public void StopSpawning() => stopped = true;
 
+    // Optional: if you want Phase2 to force moving platforms on
+    public void EnableMovingPlatforms(bool enable)
+    {
+        forceMoveAll = enable;
+
+        // apply to existing platforms too
+        var movers = FindObjectsOfType<PlatformMover>(true);
+        for (int i = 0; i < movers.Length; i++)
+            movers[i].SetMoving(enable, moveAmplitude, moveSpeed);
+    }
+
     public void EnterPhase2(int idsRequired)
     {
         phase2 = true;
@@ -208,6 +231,10 @@ public sealed class PlatformSpawner : MonoBehaviour
 
         Transform platform = Instantiate(platformPrefab, new Vector3(x, y, 0f), rot).transform;
 
+        // -------- MOVING CONSEQUENCE (NEW) --------
+        ApplyMovingConsequence(platform);
+        // -----------------------------------------
+
         if (phase2)
         {
             var plat = platform.GetComponent<Platform3D>();
@@ -224,6 +251,28 @@ public sealed class PlatformSpawner : MonoBehaviour
             Transform old = alive.Dequeue();
             if (old != null) Destroy(old.gameObject);
         }
+    }
+
+    private void ApplyMovingConsequence(Transform platform)
+    {
+        var mover = platform.GetComponent<PlatformMover>();
+        if (mover == null) return;
+
+        bool consequenceOn = forceMoveAll || IsConsequenceOn();
+        float chance = consequenceOn ? moveChanceConsequence : moveChanceNormal;
+
+        bool shouldMove = Random.value <= chance;
+        if (shouldMove)
+            mover.SetMoving(true, moveAmplitude, moveSpeed);
+        else
+            mover.SetMoving(false, 0f, 0f);
+    }
+
+    private bool IsConsequenceOn()
+    {
+        // Simple: default enum value (0) = normal, anything else = consequence
+        if (gameState == null) return false;
+        return (int)gameState.platformGlitchMode != 0;
     }
 
     private void TrySpawnIdOnPlatform(Transform platformRoot, float platformY)

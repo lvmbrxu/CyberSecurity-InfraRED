@@ -829,7 +829,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1053216677}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: f297c61b0d8795e46aaa29a917e12be7, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 74b7dba23eec44e45bc5dd1bedcdf175, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
@@ -845,16 +845,12 @@ VideoPlayer:
   m_AudioOutputMode: 2
   m_TargetAudioSources:
   - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
   m_DirectAudioVolumes:
   - 1
-  - 1
-  - 1
   m_Url: 
-  m_EnabledAudioTracks: 010101
-  m_DirectAudioMutes: 010101
-  m_ControlledAudioTrackCount: 3
+  m_EnabledAudioTracks: 01
+  m_DirectAudioMutes: 01
+  m_ControlledAudioTrackCount: 1
   m_PlayOnAwake: 1
   m_SkipOnDrop: 1
   m_Looping: 1
@@ -1606,7 +1602,7 @@ MonoBehaviour:
   enableClues: 1
   previewPieceHasClueChance: 0.2
   maxCluesPerPiece: 1
-  cluesTargetToWin: 1
+  cluesTargetToWin: 9
   clueVisualPrefab: {fileID: 6539680256414756112, guid: e105b3060fa276640ae8def7f78599f6, type: 3}
   clueLocalOffset: {x: 0, y: 0, z: -0.55}
   clueLocalScale: {x: 0.07, y: 0.07, z: 0.07}
@@ -2190,7 +2186,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1719093118
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2355,7 +2351,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1833690462}
-  - component: {fileID: 1833690461}
   m_Layer: 0
   m_Name: Button click
   m_TagString: Untagged
@@ -2363,21 +2358,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1833690461
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1833690460}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc66bb0a4901ea543814f356fc1efdec, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIButtonSound
-  source: {fileID: 0}
-  hoverClip: {fileID: 0}
-  clickClip: {fileID: 0}
 --- !u!4 &1833690462
 Transform:
   m_ObjectHideFlags: 0
@@ -4247,7 +4227,8 @@ PrefabInstance:
       propertyPath: pausePanel
       value: 
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1605807792835613998, guid: 40965000db46aad4db9597ee625a05d5, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -4382,11 +4363,11 @@ RectTransform:
   - {fileID: 3968337829526432523}
   - {fileID: 9056446130128935493}
   - {fileID: 2745172283817999815}
-  - {fileID: 1719093118}
-  - {fileID: 5802673619731025468}
-  - {fileID: 8497026219541457854}
   - {fileID: 673935172328462344}
   - {fileID: 1055637754}
+  - {fileID: 5802673619731025468}
+  - {fileID: 8497026219541457854}
+  - {fileID: 1719093118}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

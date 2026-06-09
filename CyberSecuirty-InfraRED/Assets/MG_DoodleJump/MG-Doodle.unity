@@ -710,7 +710,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 312876674}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: f297c61b0d8795e46aaa29a917e12be7, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 14fa3e014a5926043b086b50b49db18a, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
@@ -726,16 +726,12 @@ VideoPlayer:
   m_AudioOutputMode: 2
   m_TargetAudioSources:
   - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
   m_DirectAudioVolumes:
   - 1
-  - 1
-  - 1
   m_Url: 
-  m_EnabledAudioTracks: 010101
-  m_DirectAudioMutes: 010101
-  m_ControlledAudioTrackCount: 3
+  m_EnabledAudioTracks: 01
+  m_DirectAudioMutes: 01
+  m_ControlledAudioTrackCount: 1
   m_PlayOnAwake: 1
   m_SkipOnDrop: 1
   m_Looping: 1
@@ -1872,11 +1868,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 798
+      value: 859.6
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 447.9
+      value: 475.72
       objectReference: {fileID: 0}
     - target: {fileID: 4632172620890642152, guid: e80b0bd320d9713469bbab8b1a40e88d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -4002,6 +3998,22 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3583237200747832181, guid: 9cf3026cec9f5fd4293b6bce610d4587, type: 3}
   m_PrefabInstance: {fileID: 1860521185530937374}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2060891027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2060891026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0997baa02e015d747bbf0a9b8c9d1d93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlatformMover
+  moving: 0
+  amplitude: 4
+  speed: 2
+  randomPhase: 0
 --- !u!1 &2071923636
 GameObject:
   m_ObjectHideFlags: 0
@@ -4346,6 +4358,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3317869198329610496, guid: 9cf3026cec9f5fd4293b6bce610d4587, type: 3}
+      propertyPath: moving
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3583237200747832181, guid: 9cf3026cec9f5fd4293b6bce610d4587, type: 3}
       propertyPath: m_Name
       value: Platforms
@@ -4393,7 +4409,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3583237200747832181, guid: 9cf3026cec9f5fd4293b6bce610d4587, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2060891027}
   m_SourcePrefab: {fileID: 100100000, guid: 9cf3026cec9f5fd4293b6bce610d4587, type: 3}
 --- !u!1001 &5693305002099922232
 PrefabInstance:
@@ -4411,6 +4430,30 @@ PrefabInstance:
       propertyPath: player
       value: 
       objectReference: {fileID: 1701509025}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: xLimit
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: maxGapY
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: minGapY
+      value: 3.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: gameState
+      value: 
+      objectReference: {fileID: 11400000, guid: a750a041cd92e604682179a4e7cba60a, type: 2}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: spawnAheadY
+      value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: moveAmplitude
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 1439904409014475843, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
       propertyPath: platformPrefab
       value: 
@@ -4471,6 +4514,10 @@ PrefabInstance:
       propertyPath: musicSource
       value: 
       objectReference: {fileID: 2146830904}
+    - target: {fileID: 4248479572727256959, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
+      propertyPath: phase1Music
+      value: 
+      objectReference: {fileID: 8300000, guid: 34de036be9dd3854da7cb84dd3dca401, type: 3}
     - target: {fileID: 7209798924461872437, guid: 68081c1760b1ab0489f8bfa5979a5a85, type: 3}
       propertyPath: m_Name
       value: DoodleJumpManager

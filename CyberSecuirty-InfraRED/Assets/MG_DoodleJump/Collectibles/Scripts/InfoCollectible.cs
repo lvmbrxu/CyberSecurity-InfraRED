@@ -27,9 +27,7 @@ public sealed class InfoCollectible : MonoBehaviour
     {
         if (_collected) return;
         if (other.GetComponentInParent<DoodleJumpPlayer3D_CC>() == null) return;
-
-        _collected = true;
-        GameManager.Instance?.AddSecurityDelta01(securityDelta01);
+        
 
         if (sfx != null)
         {

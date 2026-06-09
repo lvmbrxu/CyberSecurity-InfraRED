@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2a6dfdf1a9fa85489963bb3c5d823fc, type: 3}
   m_Name: GameStateS0
   m_EditorClassIdentifier: Assembly-CSharp::GameStateSO
-  platformGlitchMode: 0
+  platformGlitchMode: 1
   popupMode: 0
