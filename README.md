@@ -26,3 +26,5 @@ Open that folder through Unity Hub to run or inspect the project.
 ## Notes
 
 This was developed as a collaborative student project. The repository preserves the project as submitted, including its original folder names. Third-party assets remain subject to their original licences.
+
+More of my work is available on my [portfolio](https://vladut-andrei-lambru.github.io/Portfolio/). Contact: [v.lambru@st.hanze.nl](mailto:v.lambru@st.hanze.nl).
